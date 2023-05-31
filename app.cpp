@@ -2,13 +2,19 @@
 #include <functional>
 #include <fstream>
 #include <vector>
+#include <map>
 #include <string>
+#include <string_view>
 #include <sstream>
 #include <future>
 #include <thread>
 #include "utimer.cpp"
 #include "./include/ThreadPool.hpp"
 #include "./include/SafeQueue.h"
+#include <sstream>
+#include <unordered_map>
+
+
 
 
 
@@ -44,13 +50,37 @@ void huffmanTreeBuilder(){
 
 }
 
-int read(string line){
-	vector<string> row;
-	string word;
+void print_map(std::string_view comment, const unordered_map<std::string, int>& m)
+{
+    std::cout << comment;
+    // iterate using C++17 facilities
+    for (const auto& [key, value] : m)
+        std::cout << '[' << key << "] = " << value << "; "<<endl;
+ 
+// C++11 alternative:
+//  for (const auto& n : m)
+//      std::cout << n.first << " = " << n.second << "; ";
+//
+// C++98 alternative
+//  for (std::map<std::string, int>::const_iterator it = m.begin(); it != m.end(); it++)
+//      std::cout << it->first << " = " << it->second << "; ";
+ 
+    std::cout << '\n';
+}
 
-	return 15;
+void read(string line, unordered_map<string, int>& m) {
+
+    istringstream input2;
+    input2.str(line);
+    for (string elem; getline(input2,elem, ' '); ){
+        cout << elem << '\n';
+		m[elem] = m[elem] + 1;
+		}
 
 }
+
+  
+
 
 
 
@@ -95,14 +125,20 @@ int main(){
 	string fname = "./data/asciiText.txt";
 	string line;
 	fstream file (fname, ios::in);
-	ThreadPool pool(64);
+
+	unordered_map<string, int> m{};
+
+
+	ThreadPool pool(10);
 	pool.init();
+
 	while(!file.eof()){
-		getline(file, line);
-		future<int> future = pool.submit(read,line);
-		const int result = future.get();
-		cout << result << endl;
+		getline(file,line);
+		auto future = pool.submit(read,line, ref(m));
+		future.get();
 	}
+	print_map("Map:",m);
+	pool.shutdown();
 
 return 0;
 }
