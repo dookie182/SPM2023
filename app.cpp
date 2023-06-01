@@ -9,11 +9,13 @@
 #include <future>
 #include <queue>
 #include <thread>
+#include <mutex>
 #include "utimer.cpp"
 #include "./include/ThreadPool.hpp"
 #include "./include/SafeQueue.h"
 #include <sstream>
 #include <unordered_map>
+
 
 
 using namespace std;
@@ -124,12 +126,15 @@ void print_map(std::string_view comment, const unordered_map<std::string, int>& 
     std::cout << '\n';
 }
 
-void read(string line, unordered_map<string, int>& m) {
+void read(string line, unordered_map<string, int>& m, mutex& mutual_exclusion) {
 
+	unique_lock locker{mutual_exclusion, std::defer_lock};
     istringstream input;
     input.str(line);
     for (string elem;  getline(input,elem, ' ');){
+		locker.lock();
 		m[elem] = m[elem] + 1;
+		locker.unlock();
 		}
 
 }
@@ -137,9 +142,11 @@ void read(string line, unordered_map<string, int>& m) {
 int main(){
 	utimer t0("Complete Execution");
 	vector<int> v;
+	vector<future<void>> future_arr;
 	string fname = "./data/asciiText.txt";
 	string line;
 	fstream file (fname, ios::in);
+	mutex mutual_exclusion;
 	priority_queue<Node*, vector<Node*>,compare> queue;
 	priority_queue<Node*, vector<Node*>,compare> tempQueue;
 
@@ -149,13 +156,19 @@ int main(){
 
 	ThreadPool pool(64);
 	pool.init();
-	utimer t1("Huffman Encoding");
 
 	while(!file.eof()){
 		getline(file,line);
-		auto future = pool.submit(read,line, ref(m));
-		future.get();
+		future_arr.push_back(pool.submit(read,line, ref(m), ref(mutual_exclusion)));
+		//auto future = pool.submit(read,line, ref(m));
+		//future.get();
 	}
+	utimer t1("Huffman Encoding");
+
+	for (auto& elem : future_arr){
+		elem.get();
+	}
+
 	huffmanTreeBuilder(m,ref(queue),ref(tempQueue));
 	
 	//print_map("Map:",m);
