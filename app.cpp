@@ -82,7 +82,7 @@ void decode(Node* root, int &index, string str)
 		decode(root->right, index, str);
 }
 
-void huffmanTreeBuilder(unordered_map<string, int> m, priority_queue<Node*, vector<Node*>,compare>& queue, priority_queue<Node*, vector<Node*>,compare>& tempQueue){
+unordered_map<string, string> huffmanTreeBuilder(unordered_map<string, int> m, priority_queue<Node*, vector<Node*>,compare>& queue){
 
 //	Generating Leaf Nodes with associated priorities;
 	for (auto pair: m) {
@@ -110,6 +110,7 @@ void huffmanTreeBuilder(unordered_map<string, int> m, priority_queue<Node*, vect
 		cout << pair.first << " " << pair.second << '\n';
 	}
 
+	return huffmanMap;
 
 }
 
@@ -131,45 +132,85 @@ void read(string line, unordered_map<string, int>& m, mutex& mutual_exclusion) {
 	unique_lock locker{mutual_exclusion, std::defer_lock};
     istringstream input;
     input.str(line);
-    for (string elem;  getline(input,elem, ' ');){
+	unordered_map<string, int> temp;
+	
+	// Map Reduce on a local temp Map;
+	for(string elem; getline(input,elem,' ');){
+		temp[elem] = temp[elem] + 1;
+	}
+	
+	// Storing Data in original Map;
+	for (auto pair: temp) {
 		locker.lock();
-		m[elem] = m[elem] + 1;
+		m[pair.first] = pair.second;
 		locker.unlock();
-		}
+	}
+}
 
+string write(string line, unordered_map<string, string> huffmanMap) {
+
+	string output;
+    istringstream input;
+    input.str(line);
+	
+	// Map Reduce on a local temp Map;
+	for(string elem; getline(input,elem,' ');){
+		output+= huffmanMap[elem];
+	}
+	
+	return output;
 }
 
 int main(){
 	utimer t0("Complete Execution");
 	vector<int> v;
 	vector<future<void>> future_arr;
-	string fname = "./data/asciiText.txt";
+	vector<future<string>> future_arr2;
+
+	string fname = "./data/asciiText2.txt";
+	string compressedFname = "./data/asciiText2_compressed.txt";
+
 	string line;
 	fstream file (fname, ios::in);
+	fstream compressed_file (compressedFname, ios::out);
+
+	//int dim = file.tellg();
 	mutex mutual_exclusion;
 	priority_queue<Node*, vector<Node*>,compare> queue;
-	priority_queue<Node*, vector<Node*>,compare> tempQueue;
-
-
 	unordered_map<string, int> m;
-
-
+	unordered_map<string, string> huffmanMap;
 	ThreadPool pool(64);
 	pool.init();
 
+	utimer t2("Pushing Tasks");
 	while(!file.eof()){
 		getline(file,line);
 		future_arr.push_back(pool.submit(read,line, ref(m), ref(mutual_exclusion)));
-		//auto future = pool.submit(read,line, ref(m));
-		//future.get();
 	}
 	utimer t1("Huffman Encoding");
 
 	for (auto& elem : future_arr){
 		elem.get();
+		
+
+	}
+	huffmanMap = huffmanTreeBuilder(m,ref(queue));
+	
+	file.clear();
+	file.seekg(0);
+
+
+	while(!file.eof()){
+		getline(file,line);
+		future_arr2.push_back(pool.submit(write,line, huffmanMap));
 	}
 
-	huffmanTreeBuilder(m,ref(queue),ref(tempQueue));
+
+	for (auto& elem : future_arr2){  
+		compressed_file << elem.get();
+	}
+	compressed_file.close();
+
 	
 	//print_map("Map:",m);
 	pool.shutdown();
