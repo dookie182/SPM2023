@@ -19,12 +19,21 @@
 using namespace std;
 
 struct Node {
-    char ch;
+    string ch;
 	int freq;
 	Node *left, *right;
 };
 
-Node* createNode(char ch, int freq, Node* left, Node*right){
+struct compare
+{
+	bool operator()(Node* left, Node* right)
+	{
+		// highest priority item has lowest frequency
+		return left->freq > right->freq;
+	}
+};
+
+Node* createNode(string ch, int freq, Node* left, Node*right){
 
 	Node* newNode = new Node();
 	newNode->ch = ch;
@@ -36,15 +45,69 @@ Node* createNode(char ch, int freq, Node* left, Node*right){
 }
 
 
-void encode(){
+void encode(Node* root, string str, unordered_map<string, string> &huffmanMap)
+{
+	if (root == nullptr)
+		return;
 
+	// found a leaf node
+	if (!root->left && !root->right) {
+		huffmanMap[root->ch] = str;
+	}
+
+	encode(root->left, str + "0", huffmanMap);
+	encode(root->right, str + "1", huffmanMap);
 }
 
-void decode(){
+void decode(Node* root, int &index, string str)
+{
+	if (root == nullptr) {
+		return;
+	}
 
+	// found a leaf node
+	if (!root->left && !root->right)
+	{
+		cout << root->ch;
+		return;
+	}
+
+	index++;
+
+	if (str[index] =='0')
+		decode(root->left, index, str);
+	else
+		decode(root->right, index, str);
 }
 
-void huffmanTreeBuilder(){
+void huffmanTreeBuilder(unordered_map<string, int> m, priority_queue<Node*, vector<Node*>,compare>& queue, priority_queue<Node*, vector<Node*>,compare>& tempQueue){
+
+//	Generating Leaf Nodes with associated priorities;
+	for (auto pair: m) {
+		queue.push(createNode(pair.first, pair.second, nullptr, nullptr));
+	}
+
+	while (queue.size() != 1)
+	{
+		// Remove the two nodes of highest priority
+		Node *left = queue.top(); queue.pop();
+		Node *right = queue.top();	queue.pop();
+		
+		// Create a new internal node with these two nodes
+		// as children and with frequency equal to the sum
+		// of the two nodes' frequencies. Add the new node
+		// to the priority queue.
+		int sum = left->freq + right->freq;
+		queue.push(createNode(" ", sum, left, right));
+	}
+
+	Node* root = queue.top();
+	unordered_map<string, string> huffmanMap;
+	encode(root, "", huffmanMap);
+	for (auto pair: huffmanMap) {
+		cout << pair.first << " " << pair.second << '\n';
+	}
+
 
 }
 
@@ -77,7 +140,9 @@ int main(){
 	string fname = "./data/asciiText.txt";
 	string line;
 	fstream file (fname, ios::in);
-	priority_queue<int> q1;
+	priority_queue<Node*, vector<Node*>,compare> queue;
+	priority_queue<Node*, vector<Node*>,compare> tempQueue;
+
 
 	unordered_map<string, int> m;
 
@@ -91,6 +156,7 @@ int main(){
 		auto future = pool.submit(read,line, ref(m));
 		future.get();
 	}
+	huffmanTreeBuilder(m,ref(queue),ref(tempQueue));
 	
 	//print_map("Map:",m);
 	pool.shutdown();
