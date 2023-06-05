@@ -10,9 +10,9 @@
 #include <queue>
 #include <thread>
 #include <mutex>
-#include "utimer.cpp"
-#include "./include/ThreadPool.hpp"
-#include "./include/SafeQueue.h"
+#include "../include/utimer.cpp"
+#include "../include/ThreadPool.hpp"
+#include "../include/SafeQueue.h"
 #include <sstream>
 #include <unordered_map>
 
@@ -70,7 +70,7 @@ void decode(Node* root, int &index, string str)
 	// found a leaf node
 	if (!root->left && !root->right)
 	{
-		cout << root->ch;
+		cout << root->ch << " ";
 		return;
 	}
 
@@ -82,7 +82,7 @@ void decode(Node* root, int &index, string str)
 		decode(root->right, index, str);
 }
 
-unordered_map<string, string> huffmanTreeBuilder(unordered_map<string, int> m, priority_queue<Node*, vector<Node*>,compare>& queue){
+unordered_map<string, string> huffmanTreeBuilder(unordered_map<string, int> m, priority_queue<Node*, vector<Node*>,compare>& queue, Node* &root){
 
 //	Generating Leaf Nodes with associated priorities;
 	for (auto pair: m) {
@@ -103,12 +103,13 @@ unordered_map<string, string> huffmanTreeBuilder(unordered_map<string, int> m, p
 		queue.push(createNode(" ", sum, left, right));
 	}
 
-	Node* root = queue.top();
+	root = queue.top();
 	unordered_map<string, string> huffmanMap;
 	encode(root, "", huffmanMap);
 	for (auto pair: huffmanMap) {
 		cout << pair.first << " " << pair.second << '\n';
 	}
+
 
 	return huffmanMap;
 
@@ -167,12 +168,14 @@ int main(){
 	vector<future<void>> future_arr;
 	vector<future<string>> future_arr2;
 
-	string fname = "./data/asciiText2.txt";
-	string compressedFname = "./data/asciiText2_compressed.txt";
+	string fname = "../data/test.txt";
+	string compressedFname = "../data/asciiText2_compressed.txt";
 
-	string line;
+	string line, toWrite,str;
 	fstream file (fname, ios::in);
 	fstream compressed_file (compressedFname, ios::out);
+
+	Node* root;
 
 	//int dim = file.tellg();
 	mutex mutual_exclusion;
@@ -194,7 +197,7 @@ int main(){
 		
 
 	}
-	huffmanMap = huffmanTreeBuilder(m,ref(queue));
+	huffmanMap = huffmanTreeBuilder(m,ref(queue),root);
 	
 	file.clear();
 	file.seekg(0);
@@ -207,9 +210,20 @@ int main(){
 
 
 	for (auto& elem : future_arr2){  
-		compressed_file << elem.get();
+		toWrite = elem.get();
+		str = str + toWrite;
+		compressed_file << toWrite;
 	}
 	compressed_file.close();
+
+	// traverse the Huffman Tree again and this time
+	// decode the encoded string
+	int index = -1;
+	cout << "\nDecoded string is: \n";
+	while (index < (int)str.size() - 2) {
+		decode(root, index, str);
+	}
+	cout << endl;
 
 	
 	//print_map("Map:",m);
