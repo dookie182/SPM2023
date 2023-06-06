@@ -20,6 +20,7 @@
 
 using namespace std;
 
+
 struct Node {
     char ch;
 	int freq;
@@ -115,7 +116,7 @@ unordered_map<char, string> huffmanTreeBuilder(unordered_map<char, int> m, prior
 
 }
 
-void print_map(std::string_view comment, const unordered_map<std::string, int>& m)
+void print_map(std::string_view comment, const unordered_map<char, int>& m)
 {
     std::cout << comment;
     // iterate using C++17 facilities
@@ -129,10 +130,8 @@ void print_map(std::string_view comment, const unordered_map<std::string, int>& 
 }
 
 void read(string line, unordered_map<char, int>& m, mutex& mutual_exclusion) {
-
+	
 	unique_lock locker{mutual_exclusion, std::defer_lock};
-    istringstream input;
-    input.str(line);
 	unordered_map<char, int> temp;
 	
 	// Map Reduce on a local temp Map;
@@ -143,7 +142,7 @@ void read(string line, unordered_map<char, int>& m, mutex& mutual_exclusion) {
 	// Storing Data in original Map;
 	for (auto pair: temp) {
 		locker.lock();
-		m[pair.first] = pair.second;
+		m[pair.first] = m[pair.first] + pair.second;
 		locker.unlock();
 	}
 }
@@ -151,9 +150,7 @@ void read(string line, unordered_map<char, int>& m, mutex& mutual_exclusion) {
 string write(string line, unordered_map<char, string> huffmanMap) {
 
 	string output;
-    istringstream input;
-    input.str(line);
-	
+
 	// Map Reduce on a local temp Map;
 	for(char elem : line){
 		output+= huffmanMap[elem];
@@ -164,7 +161,6 @@ string write(string line, unordered_map<char, string> huffmanMap) {
 
 int main(){
 	{ utimer t0("Complete Execution"); 
-	vector<int> v;
 	vector<future<void>> future_arr;
 	vector<future<string>> future_arr2;
 
@@ -193,6 +189,7 @@ int main(){
 	for (auto& elem : future_arr){
 		elem.get();
 	}
+
 	}
 
 	{ utimer t2("Building & Encoding Huffman Tree");
@@ -213,7 +210,6 @@ int main(){
 
 	for (auto& elem : future_arr2){  
 		toWrite = elem.get();
-		str = str + toWrite;
 		compressed_file << toWrite;
 	}
 	
