@@ -21,7 +21,7 @@
 using namespace std;
 
 struct Node {
-    string ch;
+    char ch;
 	int freq;
 	Node *left, *right;
 };
@@ -35,7 +35,7 @@ struct compare
 	}
 };
 
-Node* createNode(string ch, int freq, Node* left, Node*right){
+Node* createNode(char ch, int freq, Node* left, Node*right){
 
 	Node* newNode = new Node();
 	newNode->ch = ch;
@@ -47,7 +47,7 @@ Node* createNode(string ch, int freq, Node* left, Node*right){
 }
 
 
-void encode(Node* root, string str, unordered_map<string, string> &huffmanMap)
+void encode(Node* root, string str, unordered_map<char, string> &huffmanMap)
 {
 	if (root == nullptr)
 		return;
@@ -70,7 +70,7 @@ void decode(Node* root, int &index, string str)
 	// found a leaf node
 	if (!root->left && !root->right)
 	{
-		cout << root->ch << " ";
+		cout << root->ch;
 		return;
 	}
 
@@ -82,7 +82,7 @@ void decode(Node* root, int &index, string str)
 		decode(root->right, index, str);
 }
 
-unordered_map<string, string> huffmanTreeBuilder(unordered_map<string, int> m, priority_queue<Node*, vector<Node*>,compare>& queue, Node* &root){
+unordered_map<char, string> huffmanTreeBuilder(unordered_map<char, int> m, priority_queue<Node*, vector<Node*>,compare>& queue, Node* &root){
 
 //	Generating Leaf Nodes with associated priorities;
 	for (auto pair: m) {
@@ -100,11 +100,11 @@ unordered_map<string, string> huffmanTreeBuilder(unordered_map<string, int> m, p
 		// of the two nodes' frequencies. Add the new node
 		// to the priority queue.
 		int sum = left->freq + right->freq;
-		queue.push(createNode(" ", sum, left, right));
+		queue.push(createNode('\0', sum, left, right));
 	}
 
 	root = queue.top();
-	unordered_map<string, string> huffmanMap;
+	unordered_map<char, string> huffmanMap;
 	encode(root, "", huffmanMap);
 	for (auto pair: huffmanMap) {
 		cout << pair.first << " " << pair.second << '\n';
@@ -128,18 +128,18 @@ void print_map(std::string_view comment, const unordered_map<std::string, int>& 
     std::cout << '\n';
 }
 
-void read(string line, unordered_map<string, int>& m, mutex& mutual_exclusion) {
+void read(string line, unordered_map<char, int>& m, mutex& mutual_exclusion) {
 
 	unique_lock locker{mutual_exclusion, std::defer_lock};
     istringstream input;
     input.str(line);
-	unordered_map<string, int> temp;
+	unordered_map<char, int> temp;
 	
 	// Map Reduce on a local temp Map;
-	for(string elem; getline(input,elem,' ');){
+	for(char elem: line){
 		temp[elem] = temp[elem] + 1;
 	}
-	
+
 	// Storing Data in original Map;
 	for (auto pair: temp) {
 		locker.lock();
@@ -148,14 +148,14 @@ void read(string line, unordered_map<string, int>& m, mutex& mutual_exclusion) {
 	}
 }
 
-string write(string line, unordered_map<string, string> huffmanMap) {
+string write(string line, unordered_map<char, string> huffmanMap) {
 
 	string output;
     istringstream input;
     input.str(line);
 	
 	// Map Reduce on a local temp Map;
-	for(string elem; getline(input,elem,' ');){
+	for(char elem : line){
 		output+= huffmanMap[elem];
 	}
 	
@@ -163,72 +163,77 @@ string write(string line, unordered_map<string, string> huffmanMap) {
 }
 
 int main(){
-	utimer t0("Complete Execution");
+	{ utimer t0("Complete Execution"); 
 	vector<int> v;
 	vector<future<void>> future_arr;
 	vector<future<string>> future_arr2;
 
-	string fname = "../data/test.txt";
+	string fname = "../data/dataset.txt";
 	string compressedFname = "../data/asciiText2_compressed.txt";
 
-	string line, toWrite,str;
+	string line, toWrite, str;
 	fstream file (fname, ios::in);
 	fstream compressed_file (compressedFname, ios::out);
 
 	Node* root;
 
-	//int dim = file.tellg();
 	mutex mutual_exclusion;
 	priority_queue<Node*, vector<Node*>,compare> queue;
-	unordered_map<string, int> m;
-	unordered_map<string, string> huffmanMap;
+	unordered_map<char, int> m;
+	unordered_map<char, string> huffmanMap;
 	ThreadPool pool(64);
 	pool.init();
 
-	utimer t2("Pushing Tasks");
-	while(!file.eof()){
-		getline(file,line);
-		future_arr.push_back(pool.submit(read,line, ref(m), ref(mutual_exclusion)));
-	}
-	utimer t1("Huffman Encoding");
+	{ utimer t1("Reading File & Pushing Tasks");
+		while(!file.eof()){
+			getline(file,line);
+			future_arr.push_back(pool.submit(read,line, ref(m), ref(mutual_exclusion)));
+		}
 
 	for (auto& elem : future_arr){
 		elem.get();
-		
-
 	}
+	}
+
+	{ utimer t2("Building & Encoding Huffman Tree");
+
 	huffmanMap = huffmanTreeBuilder(m,ref(queue),root);
-	
+	}
+
+	{
+	utimer t3("Writing compressed File");
+
 	file.clear();
 	file.seekg(0);
-
 
 	while(!file.eof()){
 		getline(file,line);
 		future_arr2.push_back(pool.submit(write,line, huffmanMap));
 	}
 
-
 	for (auto& elem : future_arr2){  
 		toWrite = elem.get();
 		str = str + toWrite;
 		compressed_file << toWrite;
 	}
+	
 	compressed_file.close();
 
-	// traverse the Huffman Tree again and this time
-	// decode the encoded string
-	int index = -1;
-	cout << "\nDecoded string is: \n";
-	while (index < (int)str.size() - 2) {
-		decode(root, index, str);
 	}
-	cout << endl;
-
+	// utimer t4("Decoding String");
 	
-	//print_map("Map:",m);
+	// // traverse the Huffman Tree again and this time
+	// // decode the encoded string
+	// int index = -1;
+	// cout << "\nDecoded string is: \n";
+	// while (index < (int)str.size() - 2) {
+	// 	decode(root, index, str);
+	// }
+	// cout << endl;
+	
 	pool.shutdown();
 	file.close();
 
 return 0;
+	}
 }
