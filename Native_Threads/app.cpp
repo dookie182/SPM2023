@@ -151,7 +151,6 @@ string write(string line, unordered_map<char, string> huffmanMap) {
 
 	string output;
 
-	// Map Reduce on a local temp Map;
 	for(char elem : line){
 		output+= huffmanMap[elem];
 	}
