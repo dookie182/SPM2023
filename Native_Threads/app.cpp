@@ -166,9 +166,11 @@ int main(){
 	string fname = "../data/dataset.txt";
 	string compressedFname = "../data/asciiText2_compressed.txt";
 
-	string line, toWrite, str;
+	string line, toWrite, str, text_block;
 	fstream file (fname, ios::in);
 	fstream compressed_file (compressedFname, ios::out);
+	int file_lenght = file.tellg();
+    int chunk_size = file_lenght/4;
 
 	Node* root;
 
@@ -176,14 +178,19 @@ int main(){
 	priority_queue<Node*, vector<Node*>,compare> queue;
 	unordered_map<char, int> m;
 	unordered_map<char, string> huffmanMap;
-	ThreadPool pool(64);
+	ThreadPool pool(4);
 	pool.init();
 
 	{ utimer t1("Reading File & Pushing Tasks");
-		while(!file.eof()){
-			getline(file,line);
-			future_arr.push_back(pool.submit(read,line, ref(m), ref(mutual_exclusion)));
-		}
+	do{
+          getline(file,line);
+          text_block += line;
+          if(text_block.size() >= chunk_size){
+			future_arr.push_back(pool.submit(read,text_block, ref(m), ref(mutual_exclusion)));
+            text_block = "";
+          }
+
+        }while(!file.eof());   
 
 	for (auto& elem : future_arr){
 		elem.get();

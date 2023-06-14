@@ -120,12 +120,9 @@ unordered_map<char, string> huffmanTreeBuilder(unordered_map<char, int> m, prior
 		cout << pair.first << " " << pair.second << '\n';
 	}
 
-
 	return huffmanMap;
 
 }
-
-
 
 
 class emitter : public ff::ff_monode_t<TASK> {
@@ -158,6 +155,7 @@ class emitter : public ff::ff_monode_t<TASK> {
         return(EOS);
     }
   };
+  
 class emitter_2 : public ff::ff_monode_t<ENCODE_TASK> {
   private: 
     string fname;
@@ -212,6 +210,7 @@ private:
 
 public: 
   ENCODE_TASK * svc(ENCODE_TASK * t) {
+
     fstream compressed_file ("../data/asciiText2_compressed.txt", fstream::app);
     compressed_file << t->line;
      free(t);
@@ -349,10 +348,10 @@ int main(int argc, char * argv[]) {
   }
 
   // 	utimer t4("Decoding String");
-  // fstream file (fname, ios::in);
-  // file.seekg(0);
-  //  while(!file.eof()){
-	// 	getline(file,line);
+  // fstream file2 (compressedFname, ios::in);
+  // file2.seekg(0);
+  //  while(!file2.eof()){
+	// 	getline(file2,line);
   //   str += line;
 	// 	}
 	

@@ -4,7 +4,10 @@ CC = g++
 # compiler flags:
 #  -g     - this flag adds debugging information to the executable file
 #  -Wall  - this flag is used to turn on most compiler warnings
-CFLAGS  = -g -O3 
+CFLAGS  = -g -O3 \
+       		-ftree-vectorize -march=native -mtune=native \
+       		-fopt-info-vec-optimized 
+			
 
 # The build target 
 TARGET = app

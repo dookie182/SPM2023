@@ -4,10 +4,13 @@ CC = g++
 # compiler flags:
 #  -g     - this flag adds debugging information to the executable file
 #  -Wall  - this flag is used to turn on most compiler warnings
-CFLAGS  = -g -O3 -std=c++20 
+CFLAGS  = -g -O3 -std=c++20 \
+			-ftree-vectorize -march=native -mtune=native \
+       		-fopt-info-vec-optimized 
 
 # The build target 
 TARGET = ffhuffman
+FILE = ../data/asciiText2_compressed
 
 all: $(TARGET)
 
@@ -16,6 +19,7 @@ $(TARGET): $(TARGET).cpp
 
 clean:
 	$(RM) $(TARGET)
+	$(RM) $(FILE).txt
 
 restart:
 	$(RM) $(TARGET)
