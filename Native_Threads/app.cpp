@@ -158,6 +158,17 @@ string write(string line, unordered_map<char, string> huffmanMap) {
 	return output;
 }
 
+void clean_memory (Node* root){
+
+    if(root == nullptr){
+        return;
+    }    
+    clean_memory(root->left);
+    clean_memory(root->right);
+    delete(root);
+
+}
+
 int main(){
 	{ utimer t0("Complete Execution"); 
 	vector<future<void>> future_arr;
@@ -235,6 +246,7 @@ int main(){
 	
 	pool.shutdown();
 	file.close();
+	clean_memory(root);
 
 return 0;
 	}

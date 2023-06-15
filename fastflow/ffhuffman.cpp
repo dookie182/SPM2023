@@ -124,6 +124,17 @@ unordered_map<char, string> huffmanTreeBuilder(unordered_map<char, int> m, prior
 
 }
 
+void clean_memory (Node* root){
+
+    if(root == nullptr){
+        return;
+    }    
+    clean_memory(root->left);
+    clean_memory(root->right);
+    delete(root);
+
+}
+
 
 class emitter : public ff::ff_monode_t<TASK> {
   private: 
@@ -210,11 +221,11 @@ private:
 
 public: 
   ENCODE_TASK * svc(ENCODE_TASK * t) {
-
     fstream compressed_file ("../data/asciiText2_compressed.txt", fstream::app);
     compressed_file << t->line;
-     free(t);
-     return(GO_ON);
+    free(t);
+    compressed_file.close();
+    return(GO_ON);
   }
 
 };
@@ -241,8 +252,6 @@ public:
   }
 };
 
-
-
 class worker : public ff::ff_node_t<TASK> {
 private: 
   unordered_map <char,int> *m;
@@ -268,7 +277,6 @@ public:
       locker.lock();
       (*m)[elem.first] += elem.second;
       locker.unlock();
-      // cout << "Key:"<< elem.first << " Value:"<<(*m)[elem.first]<< endl;
     }
 
     return t;
@@ -278,13 +286,8 @@ public:
 void print_map(std::string_view comment, const unordered_map<char, int>& m)
 {
     std::cout << comment;
-    // iterate using C++17 facilities
     for (const auto& [key, value] : m)
         std::cout << '[' << key << "] = " << value << "; "<<endl;
- 
-// C++11 alternative:
-//  for (const auto& n : m)
-//      std::cout << n.first << " = " << n.second << "; "; 
     std::cout << '\n';
 }
 	
@@ -297,7 +300,7 @@ int main(int argc, char * argv[]) {
 
   string fname = (argc > 1 ? argv[1] : "../data/dataset.txt");  // Input File Name
   string compressedFname = (argc > 1 ? argv[2] : "../data/asciiText2_compressed.txt");  // Output File Name
-  int nw = (argc > 3 ? atoi(argv[3]) : 4);   // par degree
+  int nw = (argc > 3 ? atoi(argv[3]) : 2);   // par degree
   pf=(argc > 4 ? (argv[4][0]=='t' ? true : false) : true);
 
   unordered_map<char,int> m;
@@ -306,45 +309,38 @@ int main(int argc, char * argv[]) {
   Node* root;
   string str,line;
 
-
   cout << "working with " << nw << " workers " << endl; 
 
   long usecs; 
   {
     utimer t0("parallel computation",&usecs); 
-    // ff::ff_farm mf; 
     vector<unique_ptr<ff::ff_node>> workers(nw); 
 
     for(int i=0; i<nw; i++) 
       workers[i] = make_unique<worker>(&m,nw);
+
     auto e = emitter(nw,fname,&m);
     auto c = collector(); 
     cout << "---> " << workers.size() << endl; 
     ff::ff_Farm<> mf(move(workers),e,c);    
-
-
-    //mf.add_workers(workers);
-    //mf.add_emitter(new emitter(&v,&r)); 
-    //mf.add_collector(new collector); 
     mf.run_and_wait_end();
 
   
-  huffmanMap = huffmanTreeBuilder(m,ref(queue),root);
+    huffmanMap = huffmanTreeBuilder(m,ref(queue),root);
 
-  vector<unique_ptr<ff::ff_node>> writers(nw); 
+    vector<unique_ptr<ff::ff_node>> writers(nw); 
 
-  for(int i=0; i<nw; i++)
-    writers[i] = make_unique<writer>(&huffmanMap,nw);
+    for(int i=0; i<nw; i++)
+      writers[i] = make_unique<writer>(&huffmanMap,nw);
 
 
-  auto e_writer = emitter_2(nw,fname,&huffmanMap);
-  auto c_writer = collector_2();
+    auto e_writer = emitter_2(nw,fname,&huffmanMap);
+    auto c_writer = collector_2();
 
-  ff::ff_OFarm<> mf_encode(move(writers));
-  ff::ff_Pipe<> pipe(e_writer, mf_encode, c_writer); 
+    ff::ff_OFarm<> mf_encode(move(writers));
+    ff::ff_Pipe<> pipe(e_writer, mf_encode, c_writer); 
 
-  pipe.run_and_wait_end();
-  
+    pipe.run_and_wait_end();
   }
 
   // 	utimer t4("Decoding String");
@@ -365,6 +361,8 @@ int main(int argc, char * argv[]) {
 	// cout << endl;
 
   print_map("Map:", m);
+
+  clean_memory(root);
 
   cout << "End (spent " << usecs << " usecs with "<< nw << " threads)"  << endl;
   return(0); 
