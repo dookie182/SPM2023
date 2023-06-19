@@ -133,14 +133,14 @@ void buildHuffmanTree(string text, fstream &compressed_file)
 	unordered_map<char, string> huffmanCode;
 	encode(root, "", huffmanCode);
 
-	cout << "Huffman Codes are :\n" << '\n';
-	for (auto pair: huffmanCode) {
-		cout << pair.first << " " << pair.second << '\n';
-	}
+	// cout << "Huffman Codes are :\n" << '\n';
+	// for (auto pair: huffmanCode) {
+	// 	cout << pair.first << " " << pair.second << '\n';
+	// }
 
-	cout << "\nOriginal string was :\n" << text << '\n';
+	// cout << "\nOriginal string was :\n" << text << '\n';
 
-	// print encoded string
+	// // print encoded string
 	string str = "";
 	for (char ch: text) {
 		str += huffmanCode[ch];

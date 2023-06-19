@@ -107,9 +107,9 @@ unordered_map<char, string> huffmanTreeBuilder(unordered_map<char, int> m, prior
 	root = queue.top();
 	unordered_map<char, string> huffmanMap;
 	encode(root, "", huffmanMap);
-	for (auto pair: huffmanMap) {
-		cout << pair.first << " " << pair.second << '\n';
-	}
+	// for (auto pair: huffmanMap) {
+	// 	cout << pair.first << " " << pair.second << '\n';
+	// }
 
 
 	return huffmanMap;
@@ -169,19 +169,20 @@ void clean_memory (Node* root){
 
 }
 
-int main(){
+int main(int argc, char * argv[]){
 	{ utimer t0("Complete Execution"); 
 	vector<future<void>> future_arr;
 	vector<future<string>> future_arr2;
 
-	string fname = "../data/dataset.txt";
-	string compressedFname = "../data/asciiText2_compressed.txt";
+	string fname = (argc > 1 ? argv[1] : "../data/dataset.txt");  // Input File Name
+	string compressedFname = (argc > 1 ? argv[2] : "../data/asciiText2_compressed.txt");  // Output File Name
+	int nw = (argc > 3 ? atoi(argv[3]) : 2);   // par degree
 
 	string line, toWrite, str, text_block;
 	fstream file (fname, ios::in);
 	fstream compressed_file (compressedFname, ios::out);
 	int file_lenght = file.tellg();
-    int chunk_size = file_lenght/4;
+    int chunk_size = file_lenght/nw;
 
 	Node* root;
 
@@ -189,7 +190,10 @@ int main(){
 	priority_queue<Node*, vector<Node*>,compare> queue;
 	unordered_map<char, int> m;
 	unordered_map<char, string> huffmanMap;
-	ThreadPool pool(4);
+	cout << "-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_" << endl;
+	cout << "Working with " << nw << " workers " << endl; 
+
+	ThreadPool pool(nw);
 	pool.init();
 
 	{ utimer t1("Reading File & Pushing Tasks");

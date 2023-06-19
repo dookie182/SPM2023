@@ -116,9 +116,9 @@ unordered_map<char, string> huffmanTreeBuilder(unordered_map<char, int> m, prior
 	root = queue.top();
 	unordered_map<char, string> huffmanMap;
 	encode(root, "", huffmanMap);
-	for (auto pair: huffmanMap) {
-		cout << pair.first << " " << pair.second << '\n';
-	}
+	// for (auto pair: huffmanMap) {
+	// 	cout << pair.first << " " << pair.second << '\n';
+	// }
 
 	return huffmanMap;
 
@@ -214,14 +214,16 @@ public:
   }
 
 };
+
 class collector_2 : public ff::ff_node_t<ENCODE_TASK> {
 private: 
   TASK * tt; 
-
-
+  string compressedFname;
 public: 
+  collector_2(string compressedFname):compressedFname(compressedFname){}
+
   ENCODE_TASK * svc(ENCODE_TASK * t) {
-    fstream compressed_file ("../data/asciiText2_compressed.txt", fstream::app);
+    fstream compressed_file (compressedFname, fstream::app);
     compressed_file << t->line;
     free(t);
     compressed_file.close();
@@ -293,10 +295,10 @@ void print_map(std::string_view comment, const unordered_map<char, int>& m)
 	
 int main(int argc, char * argv[]) {
 
-  if(argc == 2 && strcmp(argv[1],"-help")==0) {
-    cout << "Usage is: " << argv[0] << " n seed printflag" << endl; 
-    return(0);
-  }
+  // if(argc == 2 && strcmp(argv[1],"-help")==0) {
+  //   cout << "Usage is: " << argv[0] << " n seed printflag" << endl; 
+  //   return(0);
+  // }
 
   string fname = (argc > 1 ? argv[1] : "../data/dataset.txt");  // Input File Name
   string compressedFname = (argc > 1 ? argv[2] : "../data/asciiText2_compressed.txt");  // Output File Name
@@ -308,12 +310,12 @@ int main(int argc, char * argv[]) {
 	unordered_map<char, string> huffmanMap;  
   Node* root;
   string str,line;
-
-  cout << "working with " << nw << " workers " << endl; 
+	cout << "-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_" << endl;
+  cout << "Working with " << nw << " workers " << endl; 
 
   long usecs; 
   {
-    utimer t0("parallel computation",&usecs); 
+    utimer t0("Parallel computation",&usecs); 
     vector<unique_ptr<ff::ff_node>> workers(nw); 
 
     for(int i=0; i<nw; i++) 
@@ -321,7 +323,7 @@ int main(int argc, char * argv[]) {
 
     auto e = emitter(nw,fname,&m);
     auto c = collector(); 
-    cout << "---> " << workers.size() << endl; 
+    // cout << "---> " << workers.size() << endl; 
     ff::ff_Farm<> mf(move(workers),e,c);    
     mf.run_and_wait_end();
 
@@ -335,7 +337,7 @@ int main(int argc, char * argv[]) {
 
 
     auto e_writer = emitter_2(nw,fname,&huffmanMap);
-    auto c_writer = collector_2();
+    auto c_writer = collector_2(compressedFname);
 
     ff::ff_OFarm<> mf_encode(move(writers));
     ff::ff_Pipe<> pipe(e_writer, mf_encode, c_writer); 
@@ -360,10 +362,10 @@ int main(int argc, char * argv[]) {
 	// }
 	// cout << endl;
 
-  print_map("Map:", m);
+  //print_map("Map:", m);
 
   clean_memory(root);
 
-  cout << "End (spent " << usecs << " usecs with "<< nw << " threads)"  << endl;
+  cout << "End Parallel Computation: (spent " << usecs << " usecs with "<< nw << " threads)"  << endl;
   return(0); 
 }
