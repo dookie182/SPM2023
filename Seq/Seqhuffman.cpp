@@ -159,12 +159,10 @@ int main()
         utimer t0("End Sequential Computation",&usecs);
         string text_block, line;
         string fname = "../data/dataset.txt";
-        string compressedFname = "../data/asciiText2_compressed.txt";
+        string compressedFname = "../data/dataset_compressed_SEQ.txt";
 
         fstream file (fname, ios::in);
         fstream compressed_file (compressedFname, ios::out);
-        int file_lenght = file.tellg();
-        int chunk_size = file_lenght/4;
 
         do{
             getline(file,line);

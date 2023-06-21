@@ -169,14 +169,10 @@ void clean_memory (Node* root){
 
 }
 
-int main(int argc, char * argv[]){
+void start(int nw, string fname, string compressedFname){
 	{ utimer t0("Complete Execution"); 
 	vector<future<void>> future_arr;
 	vector<future<string>> future_arr2;
-
-	string fname = (argc > 1 ? argv[1] : "../data/dataset.txt");  // Input File Name
-	string compressedFname = (argc > 1 ? argv[2] : "../data/asciiText2_compressed.txt");  // Output File Name
-	int nw = (argc > 3 ? atoi(argv[3]) : 2);   // par degree
 
 	string line, toWrite, str, text_block;
 	fstream file (fname, ios::in);
@@ -251,7 +247,19 @@ int main(int argc, char * argv[]){
 	pool.shutdown();
 	file.close();
 	clean_memory(root);
+}
+}
 
-return 0;
+int main(int argc, char * argv[]){
+	
+	string fname = (argc > 1 ? argv[1] : "../data/dataset.txt");  // Input File Name
+	string compressedFname = (argc > 1 ? argv[2] : "../data/dataset_compressed_NT.txt");  // Output File Name
+	int nw = (argc > 3 ? atoi(argv[3]) : 64);   // par degree
+
+	for (int i = 1; i <= 64; i*=2){
+		start(i,fname,compressedFname);
 	}
+	
+return 0;	
+	
 }

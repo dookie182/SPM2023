@@ -3,17 +3,17 @@
 #include <thread>
 #include <cmath>
 #include <cstring>
+#include <array>
 #include <functional>
 #include <unistd.h>
 #include <thread>
+#include <bitset>
 #include <mutex>
 #include "../include/utimer.cpp"
 
 #include <ff/ff.hpp>		// change 1: include fastflow library code
 
 bool pf = false; 
-
-
 
 using namespace std; 
 
@@ -135,7 +135,6 @@ void clean_memory (Node* root){
 
 }
 
-
 class emitter : public ff::ff_monode_t<TASK> {
   private: 
     string fname;
@@ -165,7 +164,7 @@ class emitter : public ff::ff_monode_t<TASK> {
         file.close();
         return(EOS);
     }
-  };
+};
   
 class emitter_2 : public ff::ff_monode_t<ENCODE_TASK> {
   private: 
@@ -219,17 +218,40 @@ class collector_2 : public ff::ff_node_t<ENCODE_TASK> {
 private: 
   TASK * tt; 
   string compressedFname;
+  string tail;
 public: 
   collector_2(string compressedFname):compressedFname(compressedFname){}
 
   ENCODE_TASK * svc(ENCODE_TASK * t) {
     fstream compressed_file (compressedFname, fstream::app);
-    compressed_file << t->line;
+    char arr [t->line.size() + 1];
+    strcpy(arr, t->line.c_str()); 
+    string tmp;
+    int index = 0;
+
+    if (tail.size() > 0){
+      tmp = tail;
+      tail = "";
+    }
+
+    for (char ch : arr){
+      tmp = tmp + ch;
+      if(index % 8 == 0){
+        if (tmp.size() == 8){
+          compressed_file << char(stoi(tmp));
+          tmp = "";
+        }else{
+          tail = tmp;
+          tmp = "";
+        }
+      }
+      index++;
+    }
+
     free(t);
     compressed_file.close();
     return(GO_ON);
   }
-
 };
 
 class writer : public ff::ff_node_t<ENCODE_TASK> {
@@ -292,19 +314,8 @@ void print_map(std::string_view comment, const unordered_map<char, int>& m)
         std::cout << '[' << key << "] = " << value << "; "<<endl;
     std::cout << '\n';
 }
-	
-int main(int argc, char * argv[]) {
 
-  // if(argc == 2 && strcmp(argv[1],"-help")==0) {
-  //   cout << "Usage is: " << argv[0] << " n seed printflag" << endl; 
-  //   return(0);
-  // }
-
-  string fname = (argc > 1 ? argv[1] : "../data/dataset.txt");  // Input File Name
-  string compressedFname = (argc > 1 ? argv[2] : "../data/asciiText2_compressed.txt");  // Output File Name
-  int nw = (argc > 3 ? atoi(argv[3]) : 2);   // par degree
-  pf=(argc > 4 ? (argv[4][0]=='t' ? true : false) : true);
-
+void start(int nw, string fname, string compressedFname){
   unordered_map<char,int> m;
   priority_queue<Node*, vector<Node*>,compare> queue;
 	unordered_map<char, string> huffmanMap;  
@@ -345,27 +356,53 @@ int main(int argc, char * argv[]) {
     pipe.run_and_wait_end();
   }
 
-  // 	utimer t4("Decoding String");
-  // fstream file2 (compressedFname, ios::in);
-  // file2.seekg(0);
-  //  while(!file2.eof()){
-	// 	getline(file2,line);
-  //   str += line;
-	// 	}
+  utimer t4("Decoding String");
+  fstream file2 (compressedFname, ios::in);
+  file2.seekg(0);
+   while(!file2.eof()){
+		getline(file2,line);
+    str += line;
+		}
+
+  cout << "SIZE" << str.size()<< endl;
+
+  string tmp,tail;
+  for (char ch : str){
+      bitset<8> charToBits(ch);
+      tmp = tmp + charToBits.to_string();
+    }
+    cout << tmp;
+
+
 	
-	// // traverse the Huffman Tree again and this time
-	// // decode the encoded string
-	// int index = -1;
-	// cout << "\nDecoded string is: \n";
-	// while (index < (int)str.size() - 2) {
-	// 	decode(root, index, str);
-	// }
-	// cout << endl;
+	// traverse the Huffman Tree again and this time
+	// decode the encoded string
+	int index = -1;
+	cout << "\nDecoded string is: \n";
+	while (index < (int)str.size() - 2) {
+		decode(root, index, tmp);
+	}
+	cout << endl;
 
   //print_map("Map:", m);
 
   clean_memory(root);
+  if (nw == 1){
+    cout << "SEQ"<< usecs << endl;
+  }
 
-  cout << "End Parallel Computation: (spent " << usecs << " usecs with "<< nw << " threads)"  << endl;
+  cout << "End Computation: (spent " << usecs << " usecs with "<< nw << " threads)"  << endl;
+}
+
+
+int main(int argc, char * argv[]) {
+
+  string fname = (argc > 1 ? argv[1] : "../data/dataset.txt");  // Input File Name
+  string compressedFname = (argc > 1 ? argv[2] : "../data/asciiText2_compressed.txt");  // Output File Name
+
+  for (int i = 1; i <= 1; i*=2){
+		start(i,fname,compressedFname);
+	}
+	  
   return(0); 
 }

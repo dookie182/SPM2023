@@ -11,6 +11,7 @@ CFLAGS  = -g -O3 \
 
 # The build target 
 TARGET = app
+PARAMS = "../data/dataset.txt" "../data/asciiText2_compressed_FF_1.txt" 
 
 all: $(TARGET)
 
@@ -26,5 +27,5 @@ restart:
 	./$(TARGET)
 
 run: 
-	./$(TARGET)
+	./$(TARGET) $(PARAMS)
 
