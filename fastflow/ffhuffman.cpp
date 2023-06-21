@@ -217,15 +217,12 @@ public:
 class collector_2 : public ff::ff_node_t<ENCODE_TASK> {
 private: 
   TASK * tt; 
-  string compressedFname;
+  fstream* fout;
   string tail;
 public: 
-  collector_2(string compressedFname):compressedFname(compressedFname){}
+  collector_2(fstream* fout):fout(fout){}
 
   ENCODE_TASK * svc(ENCODE_TASK * t) {
-    fstream compressed_file (compressedFname, fstream::app);
-    char arr [t->line.size() + 1];
-    strcpy(arr, t->line.c_str()); 
     string tmp;
     int index = 0;
 
@@ -234,11 +231,12 @@ public:
       tail = "";
     }
 
-    for (char ch : arr){
+    for (char ch : t->line){
       tmp = tmp + ch;
       if(index % 8 == 0){
         if (tmp.size() == 8){
-          compressed_file << char(stoi(tmp));
+          bitset<8> c(tmp);
+          *fout << static_cast<char>(c.to_ulong());
           tmp = "";
         }else{
           tail = tmp;
@@ -249,7 +247,6 @@ public:
     }
 
     free(t);
-    compressed_file.close();
     return(GO_ON);
   }
 };
@@ -348,12 +345,16 @@ void start(int nw, string fname, string compressedFname){
 
 
     auto e_writer = emitter_2(nw,fname,&huffmanMap);
-    auto c_writer = collector_2(compressedFname);
+    fstream compressed_file (compressedFname, fstream::app);
+
+    auto c_writer = collector_2(&compressed_file);
 
     ff::ff_OFarm<> mf_encode(move(writers));
     ff::ff_Pipe<> pipe(e_writer, mf_encode, c_writer); 
 
     pipe.run_and_wait_end();
+
+    compressed_file.close();
   }
 
   utimer t4("Decoding String");
