@@ -201,13 +201,9 @@ class emitter_2 : public ff::ff_monode_t<ENCODE_TASK> {
 class collector : public ff::ff_node_t<TASK> {
 private: 
   TASK * tt; 
-  string compressed_fname;
-  unordered_map<char,string> *m;
-  int nw; 
 
 public: 
   TASK * svc(TASK * t) {
-    
      free(t);
      return(GO_ON);
   }
@@ -331,7 +327,6 @@ void start(int nw, string fname, string compressedFname){
 
     auto e = emitter(nw,fname,&m);
     auto c = collector(); 
-    // cout << "---> " << workers.size() << endl; 
     ff::ff_Farm<> mf(move(workers),e,c);    
     mf.run_and_wait_end();
 
@@ -356,34 +351,32 @@ void start(int nw, string fname, string compressedFname){
 
     compressed_file.close();
   }
+  // utimer t4("Decoding String");
+  // fstream file2 (compressedFname, ios::in);
+  // file2.seekg(0);
+  //  while(!file2.eof()){
+	// 	getline(file2,line);
+  //   str += line;
+	// 	}
+  //   file2.close();
 
-  utimer t4("Decoding String");
-  fstream file2 (compressedFname, ios::in);
-  file2.seekg(0);
-   while(!file2.eof()){
-		getline(file2,line);
-    str += line;
-		}
+  // cout << "SIZE" << str.size()<< endl;
 
-  cout << "SIZE" << str.size()<< endl;
-
-  string tmp,tail;
-  for (char ch : str){
-      bitset<8> charToBits(ch);
-      tmp = tmp + charToBits.to_string();
-    }
-    cout << tmp;
-
-
+  // string tmp,tail;
+  // for (char ch : str){
+  //     bitset<8> charToBits(ch);
+  //     tmp = tmp + charToBits.to_string();
+  //   }
+    //cout << tmp;
 	
 	// traverse the Huffman Tree again and this time
 	// decode the encoded string
-	int index = -1;
-	cout << "\nDecoded string is: \n";
-	while (index < (int)str.size() - 2) {
-		decode(root, index, tmp);
-	}
-	cout << endl;
+	// int index = -1;
+	// cout << "\nDecoded string is: \n";
+	// while (index < (int)str.size() - 2) {
+	// 	decode(root, index, tmp);
+	// }
+	// cout << endl;
 
   //print_map("Map:", m);
 
@@ -401,9 +394,25 @@ int main(int argc, char * argv[]) {
   string fname = (argc > 1 ? argv[1] : "../data/dataset.txt");  // Input File Name
   string compressedFname = (argc > 1 ? argv[2] : "../data/asciiText2_compressed.txt");  // Output File Name
 
-  for (int i = 1; i <= 1; i*=2){
-		start(i,fname,compressedFname);
+  long usecs, time_seq;
+  float speedup;
+
+  for (int i = 1; i <= 64; i*=2){
+    {
+      utimer t0("End:", &usecs);
+		  start(i,fname,compressedFname);
+    }
+    if(i == 1){
+      time_seq = usecs;
+    }
+    else{
+      cout<< time_seq;
+      speedup = time_seq / usecs;
+      cout << "SpeedUp with " << i << " Threads:"<< speedup << endl;
+
+    }
 	}
 	  
   return(0); 
+
 }
