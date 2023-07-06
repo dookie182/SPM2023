@@ -1,7 +1,5 @@
 #include <iostream>
 #include "../include/utimer.cpp"
-#include "../include/ThreadPool.hpp"
-#include "../include/SafeQueue.h"
 #include <functional>
 #include <fstream>
 #include <vector>
