@@ -4,13 +4,14 @@ CC = g++
 # compiler flags:
 #  -g     - this flag adds debugging information to the executable file
 #  -Wall  - this flag is used to turn on most compiler warnings
-CFLAGS  = -g -O3 -std=c++20 -pthread\
+CFLAGS  = -g -O3 -std=c++20 -pthread \
        		-ftree-vectorize \
        		-fopt-info-vec-optimized 
 			
 
 # The build target 
 TARGET = Huffman_NT
+
 PARAMS = "../data/dataset.txt" "../data/compressed_dataset_NT.txt" 
 
 all: $(TARGET)
