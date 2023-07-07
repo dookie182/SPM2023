@@ -5,8 +5,7 @@ CC = g++
 #  -g     - this flag adds debugging information to the executable file
 #  -Wall  - this flag is used to turn on most compiler warnings
 CFLAGS  = -g -O3 -std=c++20 \
-			-ftree-vectorize -march=native -mtune=native\
-       		-fopt-info-vec-optimized 
+			
 
 # The build target 
 TARGET = ffhuffman

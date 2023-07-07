@@ -11,24 +11,22 @@
 #include <mutex>
 #include "../include/utimer.cpp"
 
-#include <ff/ff.hpp>		// change 1: include fastflow library code
-
-bool pf = false; 
+#include <ff/ff.hpp>		
 
 using namespace std; 
 
 mutex mutual_exclusion;
 
 typedef struct __task {
-  unordered_map<char,int>* m;
   string line;
-  int nw;
+  unordered_map<char,int> m;
+  //int nw;
 } TASK; 
 
 typedef struct __task_2 {
-  unordered_map<char,string>* m;
+  //unordered_map<char,string>* m;
   string line;
-  int nw;
+  //int nw;
 } ENCODE_TASK; 
 
 struct Node {
@@ -137,62 +135,43 @@ void clean_memory (Node* root){
 
 class emitter : public ff::ff_monode_t<TASK> {
   private: 
-    string fname;
-    unordered_map<char,int> *m;
     int nw; 
+    string line;
   public:
-    emitter(int nw, string fname, unordered_map<char,int> *m):nw(nw),fname(fname),m(m) {}
+    emitter(int nw, string line):nw(nw),line(line) {}
 
     TASK * svc(TASK *) {
-        string line;
         string text_block;
-        fstream file (fname, ios::in);
-        file.seekg(0);
-        int file_lenght = file.tellg();
-        int chunk_size = file_lenght/nw;
+        int chunk_size = line.size()/nw;
 
-        do{
-          getline(file,line);
-          text_block += line;
-          if(text_block.size() >= chunk_size){
-            auto t = new TASK(m,text_block,nw);
-            ff_send_out(t);
-            text_block = "";
-          }
+        for(int i = 0; i < nw; i++){
+          text_block = line.substr(i*chunk_size,chunk_size);
+          auto t = new TASK(text_block);
+          ff_send_out(t);
+          text_block.clear();
+        }
 
-        }while(!file.eof());     
-        file.close();
         return(EOS);
     }
 };
   
 class emitter_2 : public ff::ff_monode_t<ENCODE_TASK> {
   private: 
-    string fname;
-    unordered_map<char,string> *m;
     int nw; 
+    string line;
   public:
-    emitter_2(int nw, string fname, unordered_map<char,string> *m):nw(nw),fname(fname),m(m) {}
+    emitter_2(int nw, string line):nw(nw),line(line){}
 
     ENCODE_TASK * svc(ENCODE_TASK *) {
-        string line;
         string text_block;
-        fstream file (fname, ios::in);
-        file.seekg(0);
-        int file_lenght = file.tellg();
-        int chunk_size = file_lenght/nw;
+        int chunk_size = line.size()/nw;
 
-        do{
-          getline(file,line);
-          text_block += line;
-          if(text_block.size() >= chunk_size){
-            auto t = new ENCODE_TASK(m,text_block,nw);
-            ff_send_out(t);
-            text_block = "";
-          }
-
-        }while(!file.eof());     
-        file.close();
+        for(int i = 0; i < nw; i++){
+          text_block = line.substr(i*chunk_size,chunk_size);
+          auto t = new TASK(text_block);
+          ff_send_out(t);
+          text_block.clear();
+        } 
         return(EOS);
     }
   };
@@ -201,9 +180,17 @@ class emitter_2 : public ff::ff_monode_t<ENCODE_TASK> {
 class collector : public ff::ff_node_t<TASK> {
 private: 
   TASK * tt; 
+  unordered_map<char,int>* m;
 
 public: 
+
+  collector(unordered_map<char,int>* m):m(m){}
   TASK * svc(TASK * t) {
+
+    for (auto elem : t->m){
+      (*m)[elem.first] += elem.second;
+    }
+
      free(t);
      return(GO_ON);
   }
@@ -220,28 +207,25 @@ public:
 
   ENCODE_TASK * svc(ENCODE_TASK * t) {
     string tmp;
-    int index = 0;
 
     if (tail.size() > 0){
       tmp = tail;
-      tail = "";
+      tail.clear();
     }
 
     for (char ch : t->line){
-      tmp = tmp + ch;
-      if(index % 8 == 0){
-        if (tmp.size() == 8){
+      tmp += ch;
+      if (tmp.size() == 8){
           bitset<8> c(tmp);
           *fout << static_cast<char>(c.to_ulong());
-          tmp = "";
-        }else{
-          tail = tmp;
-          tmp = "";
+          tmp.clear();
         }
       }
-      index++;
-    }
 
+      if(tmp.size() > 0){
+        tail = tmp;
+      }
+    
     free(t);
     return(GO_ON);
   }
@@ -253,12 +237,10 @@ private:
   string text_block;
   int nw;
 public:
-  writer(unordered_map <char,string> *m, int nw):m(m),nw(nw) {}
+  writer(unordered_map <char,string> *m):m(m) {}
 
   ENCODE_TASK * svc(ENCODE_TASK * t) {
-    unordered_map<char,string> *m = t->m;
     auto line = t->line;
-    auto nw = t->nw; 
     string tmp;
 
     for(char ch : line){
@@ -271,30 +253,18 @@ public:
 
 class worker : public ff::ff_node_t<TASK> {
 private: 
-  unordered_map <char,int> *m;
-  string text_block;
-  int nw;
 public:
-  worker(unordered_map <char,int> *m, int nw):m(m),nw(nw) {}
 
   TASK * svc(TASK * t) {
-    unordered_map<char,int> *m = t->m;
     auto line = t->line;
-    auto nw = t->nw; 
   	
-    unique_lock locker{mutual_exclusion, std::defer_lock};
-
     unordered_map <char,int> temp;
 
     for(char ch : line){
       temp[ch] += 1;
     }
 
-    for (auto elem : temp){
-      locker.lock();
-      (*m)[elem.first] += elem.second;
-      locker.unlock();
-    }
+    t->m = temp;
 
     return t;
   }
@@ -308,7 +278,7 @@ void print_map(std::string_view comment, const unordered_map<char, int>& m)
     std::cout << '\n';
 }
 
-void start(int nw, string fname, string compressedFname){
+void start_exec(int nw, string fname, string compressedFname){
   unordered_map<char,int> m;
   priority_queue<Node*, vector<Node*>,compare> queue;
 	unordered_map<char, string> huffmanMap;  
@@ -317,75 +287,66 @@ void start(int nw, string fname, string compressedFname){
 	cout << "-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_" << endl;
   cout << "Working with " << nw << " workers " << endl; 
 
+  fstream file (fname, ios::in);
+  file.seekg(0);
+
+  {
+    utimer readingTime("Reading File");
+    do{
+          getline(file,line);
+          str += line;
+        }while(!file.eof());
+  }
+
   long usecs; 
   {
-    utimer t0("Parallel computation",&usecs); 
+    utimer t0("Total Execution", &usecs); 
     vector<unique_ptr<ff::ff_node>> workers(nw); 
 
     for(int i=0; i<nw; i++) 
-      workers[i] = make_unique<worker>(&m,nw);
+      workers[i] = make_unique<worker>();
 
-    auto e = emitter(nw,fname,&m);
-    auto c = collector(); 
+    auto e = emitter(nw,str);
+    auto c = collector(&m); 
     ff::ff_Farm<> mf(move(workers),e,c);    
-    mf.run_and_wait_end();
 
+    {
+      utimer t1("Counting occ. in text");
+      mf.run_and_wait_end();
+    }
+
+    {
+      utimer t2("Building Huffman Tree");
+      huffmanMap = huffmanTreeBuilder(m,ref(queue),root);
+    }
   
-    huffmanMap = huffmanTreeBuilder(m,ref(queue),root);
-
     vector<unique_ptr<ff::ff_node>> writers(nw); 
 
     for(int i=0; i<nw; i++)
-      writers[i] = make_unique<writer>(&huffmanMap,nw);
+      writers[i] = make_unique<writer>(&huffmanMap);
 
-
-    auto e_writer = emitter_2(nw,fname,&huffmanMap);
-    fstream compressed_file (compressedFname, fstream::app);
-
+    auto e_writer = emitter_2(nw,str);
+    fstream compressed_file (compressedFname, ios::out);
     auto c_writer = collector_2(&compressed_file);
 
     ff::ff_OFarm<> mf_encode(move(writers));
+    //ff::ff_OFarm<> mf_encode(move(writers),e_writer,c_writer);
     ff::ff_Pipe<> pipe(e_writer, mf_encode, c_writer); 
 
-    pipe.run_and_wait_end();
+    {
+      utimer t3("Encoding Text");
+      pipe.run_and_wait_end();
+      //mf_encode.run_and_wait_end();
+    }
 
     compressed_file.close();
+    file.close();
   }
-  // utimer t4("Decoding String");
-  // fstream file2 (compressedFname, ios::in);
-  // file2.seekg(0);
-  //  while(!file2.eof()){
-	// 	getline(file2,line);
-  //   str += line;
-	// 	}
-  //   file2.close();
 
-  // cout << "SIZE" << str.size()<< endl;
-
-  // string tmp,tail;
-  // for (char ch : str){
-  //     bitset<8> charToBits(ch);
-  //     tmp = tmp + charToBits.to_string();
-  //   }
-    //cout << tmp;
-	
-	// traverse the Huffman Tree again and this time
-	// decode the encoded string
-	// int index = -1;
-	// cout << "\nDecoded string is: \n";
-	// while (index < (int)str.size() - 2) {
-	// 	decode(root, index, tmp);
-	// }
-	// cout << endl;
-
-  //print_map("Map:", m);
-
-  clean_memory(root);
   if (nw == 1){
     cout << "SEQ"<< usecs << endl;
   }
 
-  cout << "End Computation: (spent " << usecs << " usecs with "<< nw << " threads)"  << endl;
 }
 
 
@@ -395,19 +356,19 @@ int main(int argc, char * argv[]) {
   string compressedFname = (argc > 1 ? argv[2] : "../data/asciiText2_compressed.txt");  // Output File Name
 
   long usecs, time_seq;
-  float speedup;
+  double speedup;
 
   for (int i = 1; i <= 64; i*=2){
     {
       utimer t0("End:", &usecs);
-		  start(i,fname,compressedFname);
+		  start_exec(i,fname,compressedFname);
     }
     if(i == 1){
       time_seq = usecs;
     }
     else{
       cout<< time_seq;
-      speedup = time_seq / usecs;
+      speedup = time_seq / (double) usecs;
       cout << "SpeedUp with " << i << " Threads:"<< speedup << endl;
 
     }
