@@ -319,7 +319,6 @@ void start_exec(int nw, string fname, string compressedFname){
   }
 }
 
-
 int main(int argc, char * argv[]) {
 
   string fname = (argc > 1 ? argv[1] : "../data/dataset.txt");  // Input File Name
