@@ -202,11 +202,7 @@ public:
   collector_2(fstream* fout):fout(fout){}
 
   ENCODE_TASK * svc(ENCODE_TASK * t) {
-    string tmp;
-
-    for (char ch : t->line){
-        *fout << ch;
-    }
+    *fout << t->line;
 
     free(t);
     return(GO_ON);
@@ -327,11 +323,6 @@ void start_exec(int nw, string fname, string compressedFname){
     compressed_file.close();
     file.close();
   }
-
-  if (nw == 1){
-    cout << "SEQ"<< usecs << endl;
-  }
-
 }
 
 
