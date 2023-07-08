@@ -12,7 +12,7 @@ CFLAGS  = -g -O3 -std=c++20 \
 # The build target 
 TARGET = ffhuffman
 FILE = ../data/asciiText2_compressed
-PARAMS = "../data/dataset.txt" "../data/asciiText2_compressed_FF_2.txt" 
+PARAMS = "../data/dataset.txt" "../data/dataset_compressed_FF.txt" 
 
 
 all: $(TARGET)

@@ -971,3 +971,17 @@ Scalability with 8 Threads:2.74642
 Scalability with 16 Threads:3.22908
 Scalability with 32 Threads:8.17566
 Scalability with 64 Threads:6.56471
+Scalability with 1 Threads:1
+Scalability with 2 Threads:1.98418
+Scalability with 4 Threads:1.44738
+Scalability with 8 Threads:2.76384
+Scalability with 16 Threads:2.83811
+Scalability with 32 Threads:4.70597
+Scalability with 64 Threads:7.04804
+Scalability with 1 Threads:1
+Scalability with 2 Threads:1.97337
+Scalability with 4 Threads:1.36277
+Scalability with 8 Threads:2.76249
+Scalability with 16 Threads:3.6325
+Scalability with 32 Threads:5.0365
+Scalability with 64 Threads:6.59597

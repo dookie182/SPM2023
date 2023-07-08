@@ -128,8 +128,9 @@ class emitter : public ff::ff_monode_t<TASK> {
   private: 
     int nw; 
     string *line;
+    int chunk_size;
   public:
-    emitter(int nw, string *line):nw(nw),line(line) {}
+    emitter(int nw, string *line, int chunk_size):nw(nw),line(line),chunk_size(chunk_size) {}
 
     TASK * svc(TASK *) {
         string text_block;
@@ -146,33 +147,11 @@ class emitter : public ff::ff_monode_t<TASK> {
     }
 };
   
-class emitter_2 : public ff::ff_monode_t<ENCODE_TASK> {
-  private: 
-    int nw; 
-    string line;
-  public:
-    emitter_2(int nw, string line):nw(nw),line(line){}
-
-    ENCODE_TASK * svc(ENCODE_TASK *) {
-        string text_block;
-        int chunk_size = line.size()/nw;
-
-        for(int i = 0; i < nw; i++){
-          text_block = line.substr(i*chunk_size,chunk_size);
-          auto t = new TASK(text_block);
-          ff_send_out(t);
-          text_block.clear();
-        } 
-        return(EOS);
-    }
-  };
-  
 
 class collector : public ff::ff_node_t<TASK> {
 private: 
   TASK * tt; 
   unordered_map<char,int>* m;
-
 public: 
 
   collector(unordered_map<char,int>* m):m(m){}
@@ -191,9 +170,24 @@ public:
 class collector_2 : public ff::ff_node_t<ENCODE_TASK> {
 private: 
   TASK * tt; 
+  string *encoded_text;
+public: 
+  collector_2(string *encoded_text):encoded_text(encoded_text){}
+
+  ENCODE_TASK * svc(ENCODE_TASK * t) {
+    *encoded_text += t->line;
+
+    free(t);
+    return(GO_ON);
+  }
+};
+
+class collector_3 : public ff::ff_node_t<ENCODE_TASK> {
+private: 
+  TASK * tt; 
   fstream* fout;
 public: 
-  collector_2(fstream* fout):fout(fout){}
+  collector_3(fstream* fout):fout(fout){}
 
   ENCODE_TASK * svc(ENCODE_TASK * t) {
     *fout << t->line;
@@ -205,32 +199,45 @@ public:
 
 class writer : public ff::ff_node_t<ENCODE_TASK> {
 private: 
-  unordered_map <char,string> *m;
   int nw;
 public:
-  writer(unordered_map <char,string> *m):m(m) {}
-
   ENCODE_TASK * svc(ENCODE_TASK * t) {
     string to_write;
     string to_send;
     string front;
-
+    
     for (auto elem : t->line){
-      to_write += (*m)[elem];
-      if (to_write.size() > 8){
-        front = to_write.substr(0,8);
-        bitset<8> c(front);			
+      to_write += elem;
+      if(to_write.size() == 8){
+        bitset<8> c(to_write);
         to_send += static_cast<char>(c.to_ulong());
-        to_write = to_write.substr(8, to_write.size() - front.size());
+        to_write.clear();
       }
-	  } 
-
+    }
     t->line = to_send;
 
     return t;
   }
 };
 
+class encoder : public ff::ff_node_t<ENCODE_TASK> {
+private: 
+  unordered_map <char,string> *m;
+  int nw;
+public:
+  encoder(unordered_map <char,string> *m):m(m) {}
+
+  ENCODE_TASK * svc(ENCODE_TASK * t) {
+    string to_send;
+
+    for (auto elem : t->line){
+      to_send += (*m)[elem];
+    }
+    t->line = to_send;
+
+    return t;
+  }
+};
 class worker : public ff::ff_node_t<TASK> {
 public:
 
@@ -259,7 +266,8 @@ void start_exec(int nw, string fname, string compressedFname){
   priority_queue<Node*, vector<Node*>,compare> queue;
 	unordered_map<char, string> huffmanMap;  
   Node* root;
-  string str,line;
+  string str,line, encoded_text;
+  int chunk_size = 0;
 	cout << "-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_" << endl;
   cout << "Working with " << nw << " workers " << endl; 
 
@@ -281,8 +289,9 @@ void start_exec(int nw, string fname, string compressedFname){
 
     for(int i=0; i<nw; i++) 
       workers[i] = make_unique<worker>();
-
-    auto e = emitter(nw,&str);
+    
+    chunk_size = str.size() / nw;
+    auto e = emitter(nw,&str,chunk_size);
     auto c = collector(&m); 
     ff::ff_Farm<> mf(move(workers),e,c);    
 
@@ -295,25 +304,44 @@ void start_exec(int nw, string fname, string compressedFname){
       utimer t2("Building Huffman Tree");
       huffmanMap = huffmanTreeBuilder(m,ref(queue),root);
     }
-  
+
+    // Vector for Encoders workers
+    vector<unique_ptr<ff::ff_node>> encoders(nw); 
+    
+    // Vector for Writers workers
     vector<unique_ptr<ff::ff_node>> writers(nw); 
 
-    for(int i=0; i<nw; i++)
-      writers[i] = make_unique<writer>(&huffmanMap);
+    for(int i=0; i<nw; i++){
+      encoders[i] = make_unique<encoder>(&huffmanMap);
+      writers[i] = make_unique<writer>();
+    }
 
-    auto e_writer = emitter_2(nw,str);
-    fstream compressed_file (compressedFname, ios::out);
-    auto c_writer = collector_2(&compressed_file);
+    //auto e_encoder = emitter(nw,&str,chunk_size);
+    auto c_encoder = collector_2(&encoded_text);
 
-    ff::ff_OFarm<> mf_encode(move(writers));
-    mf_encode.add_emitter(e_writer);
-    mf_encode.add_collector(c_writer);
+    ff::ff_OFarm<> mf_encode(move(encoders));
+    mf_encode.add_emitter(e);
+    mf_encode.add_collector(c_encoder);
 
     {
       utimer t3("Encoding Text");
       mf_encode.run_and_wait_end();
     }
 
+    fstream compressed_file (compressedFname, ios::out);
+    chunk_size = encoded_text.size() / nw * 8;
+    auto e_writer = emitter(nw,&encoded_text,chunk_size);
+    auto c_writer = collector_3(&compressed_file);
+    ff::ff_OFarm<> mf_write(move(writers));
+    mf_write.add_emitter(e_writer);
+    mf_write.add_collector(c_writer);
+
+
+    {
+      utimer t3("Compressing Text");
+      mf_write.run_and_wait_end();
+    }
+    
     compressed_file.close();
     file.close();
   }
