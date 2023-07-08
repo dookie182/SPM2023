@@ -1,19 +1,12 @@
 #include <iostream>
 #include "../include/utimer.cpp"
-#include <functional>
 #include <fstream>
 #include <vector>
-#include <map>
 #include <string>
 #include <string_view>
-#include <sstream>
-#include <future>
 #include <queue>
-#include <numeric>
-#include <iterator>
 #include <thread>
 #include <mutex>
-#include <sstream>
 #include <bitset>
 #include <unordered_map>
 
@@ -113,9 +106,6 @@ unordered_map<char, string> huffmanTreeBuilder(unordered_map<char, int> m, prior
 	root = queue.top();
 	unordered_map<char, string> huffmanMap;
 	encode(root, "", huffmanMap);
-	// for (auto pair: huffmanMap) {
-	// 	cout << pair.first << " " << pair.second << '\n';
-	// }
 
 	return huffmanMap;
 
@@ -157,13 +147,6 @@ void encodeFile(string line, unordered_map<char, string> huffmanMap, vector<stri
 
 	string to_write,front;
 
-	//string tmp = line.substr(index*chunk_size,chunk_size);
-	// vector<string> tmp;
-
-	// for (char elem: line){
-	// 	tmp.push_back(huffmanMap[elem]);
-	// }
-
 	for (auto elem : line){
 		to_write += huffmanMap[elem];
 		if (to_write.size() > 8){
@@ -173,16 +156,6 @@ void encodeFile(string line, unordered_map<char, string> huffmanMap, vector<stri
 			to_write = to_write.substr(8, to_write.size() - front.size());
 	}
 	}
-
-	// for(char elem : tmp){
-	// 	to_write += huffmanMap[elem];
-	// 	if (to_write.size() > 8){
-	// 		front = to_write.substr(0,8);
-	// 		bitset<8> c(front);			
-	// 		(*partial_writes)[index] += static_cast<char>(c.to_ulong());
-	// 		to_write = to_write.substr(8, to_write.size() - front.size());
-	// }
-	// }
 }
 
 
@@ -265,14 +238,6 @@ void start_exec(int nw, string fname, string compressedFname){
 			begin += chunk_size;
 		}
 
-		// 		begin = 0;
-		// int length = tmp.length();
-		// int chunk_size = length / nw;    
-		// int j = 0;
-        // for(j = 0; j < nw; j++){
-		// 	tids2.push_back(thread(encodeFile,tmp,huffmanMap,&partial_writes,j,chunk_size));
-		// }
-
 		for (auto& elem : tids2){
 			elem.join();
 		}
@@ -318,25 +283,21 @@ int main(int argc, char * argv[]){
 	vector<long> thread_timings;
 
 
-	for (int i = 1; i < 64; i*=2)
-			// Timings about Thread Generation
-		{
-		utimer threads("Fork of threads", &usecs2);
+	// for (int i = 1; i < 64; i*=2)
+	// 		// Timings about Thread Generation
+	// 	{
+	// 	utimer threads("Fork of threads", &usecs2);
 
-			for (int j = 0; j < i; j++){
-					tids_ex.push_back(thread(foo));			
-				}
+	// 		for (int j = 0; j < i; j++){
+	// 				tids_ex.push_back(thread(foo));			
+	// 			}
 
-			for (auto& tid : tids_ex){
-				if(tid.joinable()){
-					tid.join();
-				}
-			}
-		}
-
-
-
-
+	// 		for (auto& tid : tids_ex){
+	// 			if(tid.joinable()){
+	// 				tid.join();
+	// 			}
+	// 		}
+	// 	}
 
 	for (int i = 1; i <= 64; i*=2){
 

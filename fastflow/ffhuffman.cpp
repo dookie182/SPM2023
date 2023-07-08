@@ -1,21 +1,15 @@
 #include <iostream>
 #include <vector>
-#include <thread>
-#include <cmath>
-#include <cstring>
-#include <array>
-#include <functional>
-#include <unistd.h>
-#include <thread>
 #include <bitset>
-#include <mutex>
+#include <string>
+#include <queue>
+#include <fstream>
+#include <unordered_map>
 #include "../include/utimer.cpp"
 
 #include <ff/ff.hpp>		
 
 using namespace std; 
-
-mutex mutual_exclusion;
 
 typedef struct __task {
   string line;
