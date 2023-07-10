@@ -113,17 +113,6 @@ unordered_map<char, string> huffmanTreeBuilder(unordered_map<char, int> m, prior
 
 }
 
-void clean_memory (Node* root){
-
-    if(root == nullptr){
-        return;
-    }    
-    clean_memory(root->left);
-    clean_memory(root->right);
-    delete(root);
-
-}
-
 class emitter : public ff::ff_monode_t<TASK> {
   private: 
     int nw; 
@@ -134,7 +123,7 @@ class emitter : public ff::ff_monode_t<TASK> {
 
     TASK * svc(TASK *) {
         string text_block;
-        int chunk_size = (*line).size()/nw;
+        //int chunk_size = (*line).size()/nw;
 
         for(int i = 0; i < nw; i++){
           text_block = (*line).substr(i*chunk_size,chunk_size);
@@ -271,20 +260,21 @@ void start_exec(int nw, string fname, string compressedFname){
 	cout << "-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_" << endl;
   cout << "Working with " << nw << " workers " << endl; 
 
-  fstream file (fname, ios::in);
-  file.seekg(0);
-
-  {
-    utimer readingTime("Reading File");
-    do{
-          getline(file,line);
-          str += line;
-        }while(!file.eof());
-  }
-
   long usecs; 
   {
     utimer t0("Total Execution", &usecs); 
+
+    fstream file (fname, ios::in);
+    file.seekg(0);
+
+    {
+      utimer reading_time("Reading File");
+      do{
+            getline(file,line);
+            str += line;
+          }while(!file.eof());
+    }
+
     vector<unique_ptr<ff::ff_node>> workers(nw); 
 
     for(int i=0; i<nw; i++) 
@@ -296,12 +286,12 @@ void start_exec(int nw, string fname, string compressedFname){
     ff::ff_Farm<> mf(move(workers),e,c);    
 
     {
-      utimer t1("Counting occ. in text");
+      utimer counting_occ("Counting occ. in text");
       mf.run_and_wait_end();
     }
 
     {
-      utimer t2("Building Huffman Tree");
+      utimer building_tree("Building Huffman Tree");
       huffmanMap = huffmanTreeBuilder(m,ref(queue),root);
     }
 
@@ -316,7 +306,6 @@ void start_exec(int nw, string fname, string compressedFname){
       writers[i] = make_unique<writer>();
     }
 
-    //auto e_encoder = emitter(nw,&str,chunk_size);
     auto c_encoder = collector_2(&encoded_text);
 
     ff::ff_OFarm<> mf_encode(move(encoders));
@@ -324,21 +313,20 @@ void start_exec(int nw, string fname, string compressedFname){
     mf_encode.add_collector(c_encoder);
 
     {
-      utimer t3("Encoding Text");
+      utimer encoding_file("Encoding Text");
       mf_encode.run_and_wait_end();
     }
 
     fstream compressed_file (compressedFname, ios::out);
-    chunk_size = encoded_text.size() / nw * 8;
+    chunk_size = encoded_text.size() / nw;
     auto e_writer = emitter(nw,&encoded_text,chunk_size);
     auto c_writer = collector_3(&compressed_file);
     ff::ff_OFarm<> mf_write(move(writers));
     mf_write.add_emitter(e_writer);
     mf_write.add_collector(c_writer);
 
-
     {
-      utimer t3("Compressing Text");
+      utimer writing_file("Writing Compressed File");
       mf_write.run_and_wait_end();
     }
     
@@ -366,9 +354,7 @@ int main(int argc, char * argv[]) {
     else{
       speedup = time_seq / (double) usecs;
       cout << "SpeedUp with " << i << " Threads:"<< speedup << endl;
-
     }
 	}
-	  
   return(0); 
 }

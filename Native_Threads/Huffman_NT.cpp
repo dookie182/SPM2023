@@ -140,37 +140,45 @@ void computeOcc(string line, unordered_map<char, int>* m) {
 
 }
 
-void encodeFile(string line, unordered_map<char, string> huffmanMap, vector<string> *partial_writes, int index) {
+void encodeFile(string line, unordered_map<char, string> huffmanMap, vector<string> *partial_encoding, int index) {
 
 	string to_write,front;
 
 	for (auto elem : line){
 		to_write += huffmanMap[elem];
-		if (to_write.size() > 8){
-			front = to_write.substr(0,8);
-			bitset<8> c(front);			
-			(*partial_writes)[index] += static_cast<char>(c.to_ulong());
-			to_write = to_write.substr(8, to_write.size() - front.size());
+	// 	if (to_write.size() > 8){
+	// 		front = to_write.substr(0,8);
+	// 		bitset<8> c(front);			
+	// 		(*partial_writes)[index] += static_cast<char>(c.to_ulong());
+	// 		to_write = to_write.substr(8, to_write.size() - front.size());
+	// }
 	}
-	}
+
+	(*partial_encoding)[index] = to_write;
+
 }
 
+void compressFile(string line, vector<string> *partial_writes, int index) {
+	string tmp, to_compress;
 
+	for (auto elem : line){
+		tmp += elem;
+		if (tmp.size() == 8){
+			bitset<8> c(tmp);
+			to_compress += static_cast<char>(c.to_ulong());
+			tmp.clear();
+		}
+	}
 
-void clean_memory (Node* root){
-
-    if(root == nullptr){
-        return;
-    }    
-    clean_memory(root->left);
-    clean_memory(root->right);
-    delete(root);
-
+	(*partial_writes)[index] = to_compress;
 }
+
 
 void start_exec(int nw, string fname, string compressedFname){
 	vector<thread> tids;
 	vector<thread> tids2;
+	vector<thread> tids3;
+	vector<string> partial_encoding(nw);
 	vector<string> partial_writes(nw);
 
     // File Management
@@ -220,10 +228,12 @@ void start_exec(int nw, string fname, string compressedFname){
 
     }
 
-	{utimer t2("Building & Encoding Huffman Tree");
+	{utimer t2("Building and Encoding Huffman Tree");
 		huffmanMap = huffmanTreeBuilder(m,ref(queue),root);
 	}
 
+	{
+	utimer t_encode("Encoding File");
 	
 		begin = 0;
 		int length = tmp.length();
@@ -231,13 +241,26 @@ void start_exec(int nw, string fname, string compressedFname){
 		int j = 0;
         for(j = 0; j < nw; j++){
 			to_send = tmp.substr(0,chunk_size);
-			tids2.push_back(thread(encodeFile,to_send,huffmanMap,&partial_writes,j));
+			tids2.push_back(thread(encodeFile,to_send,huffmanMap,&partial_encoding,j));
 			begin += chunk_size;
 		}
 
 		for (auto& elem : tids2){
 			elem.join();
 		}
+	}
+
+	{
+	utimer t_compress("Compressing File");
+
+		for(int j = 0; j < nw; j++){
+			tids3.push_back(thread(compressFile,partial_encoding[j],&partial_writes,j));
+		}
+
+		for (auto& elem : tids3){
+			elem.join();
+		}
+	}
 	
 	{utimer t4("Writing compressed File");
 		for (auto elem : partial_writes){
