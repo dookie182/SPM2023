@@ -3,6 +3,7 @@
 #include <queue>
 #include <unordered_map>
 #include <fstream>
+#include <bitset>
 #include "../include/utimer.cpp"
 
 
@@ -78,17 +79,6 @@ void decode(Node* root, int &index, string str)
 		decode(root->right, index, str);
 }
 
-void clean_memory (Node* root){
-
-    if(root == nullptr){
-        return;
-    }    
-    clean_memory(root->left);
-    clean_memory(root->right);
-    delete(root);
-
-}
-
 // Builds Huffman Tree and decode given input text
 void buildHuffmanTree(string text, fstream &compressed_file)
 {
@@ -133,22 +123,23 @@ void buildHuffmanTree(string text, fstream &compressed_file)
 	unordered_map<char, string> huffmanCode;
 	encode(root, "", huffmanCode);
 
-	// cout << "Huffman Codes are :\n" << '\n';
-	// for (auto pair: huffmanCode) {
-	// 	cout << pair.first << " " << pair.second << '\n';
-	// }
-
-	// cout << "\nOriginal string was :\n" << text << '\n';
-
-	// // print encoded string
 	string str = "";
 	for (char ch: text) {
 		str += huffmanCode[ch];
 	}
 
-	compressed_file << str;
-
-    clean_memory(root);    
+	string to_write;
+	{
+		utimer t_write("Writing Compressed File");
+		for (char ch : str){
+			to_write += ch;
+			if(to_write.size() == 8){
+				bitset<8> c(str);
+				compressed_file << static_cast<char>(c.to_ulong());
+				to_write.clear();
+			}
+		}
+	}
 }
 
 // Huffman coding algorithm
@@ -164,13 +155,17 @@ int main()
         fstream file (fname, ios::in);
         fstream compressed_file (compressedFname, ios::out);
 
-        do{
-            getline(file,line);
-            text_block += line;
-            }while(!file.eof());   
+		{
+			utimer tread("Reading File");
+			do{
+				getline(file,line);
+				text_block += line;
+				}while(!file.eof());   
+		}
+		
+		buildHuffmanTree(text_block, compressed_file);
 
-        buildHuffmanTree(text_block, compressed_file);
     }
-    cout << "End (spent " << usecs << " usecs "<< endl;
+    cout << "End spent " << usecs << " usecs "<< endl;
 	return 0;
 }

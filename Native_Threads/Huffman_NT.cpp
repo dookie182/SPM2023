@@ -121,10 +121,9 @@ void print_map(std::string_view comment, const unordered_map<char, int>& m)
 
 
 
-// Function to read from a Text File and count occ.
-void readFile(string line, unordered_map<char, int>* m) {
+// Function to count occurrences of symbols in text
+void computeOcc(string line, unordered_map<char, int>* m) {
 	
-	//unique_lock locker{mutual_exclusion, std::defer_lock};
 	unordered_map<char, int> temp;
 	
 	// Map Reduce on a local temp Map;
@@ -138,8 +137,6 @@ void readFile(string line, unordered_map<char, int>* m) {
 		(*m)[pair.first] = (*m)[pair.first] + pair.second;
 	}
 	mutual_exclusion.unlock();
-
-
 
 }
 
@@ -209,11 +206,11 @@ void start_exec(int nw, string fname, string compressedFname){
         while(begin < tmp.size()){
 			if (tmp.size() - begin > chunk_size){
 				to_send = tmp.substr(begin,chunk_size);
-				tids.push_back(thread(readFile,to_send, &m));
+				tids.push_back(thread(computeOcc,to_send, &m));
 				begin += chunk_size;
 			}else{
 				to_send = tmp.substr(begin,tmp.size() - begin );
-				tids.push_back(thread(readFile,to_send, &m));
+				tids.push_back(thread(computeOcc,to_send, &m));
 				begin = tmp.size();
 			}
         }
@@ -278,9 +275,10 @@ int main(int argc, char * argv[]){
 
 	long usecs, usecs2;
 	long time_seq;
-	double speedup;
+	double speedup,scalability;
 	vector<thread> tids_ex;
 	vector<long> thread_timings;
+
 
 
 	// for (int i = 1; i < 64; i*=2)
@@ -311,11 +309,10 @@ int main(int argc, char * argv[]){
 			// Storing total sequential time computation
 			time_seq = usecs;
 		}
-		if(usecs != 0) {
+		if(usecs != 0 && i != 1) {
 			// Evaluating SpeedUp
 			speedup = time_seq / (double)usecs;
-			log << "Scalability with " << i << " Threads:"<< speedup << endl;
-			cout << "Scalability with " << i << " Threads:"<< speedup << endl;
+			cout << "SpeedUp with " << i << " Threads:"<< speedup << endl;
 
 		}
 	}
