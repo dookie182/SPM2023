@@ -123,8 +123,6 @@ class emitter : public ff::ff_monode_t<TASK> {
 
     TASK * svc(TASK *) {
         string text_block;
-        //int chunk_size = (*line).size()/nw;
-
         for(int i = 0; i < nw; i++){
           text_block = (*line).substr(i*chunk_size,chunk_size);
           auto t = new TASK(text_block);
@@ -146,8 +144,6 @@ class emitter2 : public ff::ff_monode_t<TASK> {
 
     TASK * svc(TASK *) {
         string text_block;
-        //int chunk_size = (*line).size()/nw;
-
         for(int i = 0; i < nw; i++){
           text_block = (*partial_encoding)[i];
           auto t = new TASK(text_block);
@@ -182,30 +178,13 @@ public:
 class collector_2 : public ff::ff_node_t<ENCODE_TASK> {
 private: 
   TASK * tt; 
-  vector<string> *partial_encoding;
+  vector<string> *partial_results;
   int index = 0;
 public: 
-  collector_2(vector<string> *partial_encoding):partial_encoding(partial_encoding){}
+  collector_2(vector<string> *partial_results):partial_results(partial_results){}
 
   ENCODE_TASK * svc(ENCODE_TASK * t) {
-    (*partial_encoding)[index] = t->line;
-    index++;
-
-    free(t);
-    return(GO_ON);
-  }
-};
-
-class collector_3 : public ff::ff_node_t<ENCODE_TASK> {
-private: 
-  TASK * tt; 
-  vector<string> *partial_writes;
-  int index = 0;
-public: 
-  collector_3(vector<string> *partial_writes):partial_writes(partial_writes){}
-
-  ENCODE_TASK * svc(ENCODE_TASK * t) {
-    (*partial_writes)[index] = t->line;
+    (*partial_results)[index] = t->line;
     index++;
 
     free(t);
@@ -283,7 +262,8 @@ void start_exec(int nw, string fname, string compressedFname){
   priority_queue<Node*, vector<Node*>,compare> queue;
 	unordered_map<char, string> huffmanMap;  
   Node* root;
-  string str,line, encoded_text;
+  string str,line, encoded_text, tail;
+  int groups = 0;
   vector<string> partial_encoding(nw);
 	vector<string> partial_writes(nw);
   int chunk_size = 0;
@@ -348,9 +328,6 @@ void start_exec(int nw, string fname, string compressedFname){
     }
 
 
-    int groups = 0;
-    string tail;
-
 	for (int i = 0; i < nw; i++){
 		if(tail.size() > 0){
 			partial_encoding[i] = tail + partial_encoding[i];
@@ -366,6 +343,7 @@ void start_exec(int nw, string fname, string compressedFname){
           int n_zero = 8 - tail.size();
           auto last = string(n_zero, '0') + tail;
           partial_encoding[i] = partial_encoding[i]+last;
+          tail.clear();
 		  }
 		}
 	}
@@ -373,7 +351,7 @@ void start_exec(int nw, string fname, string compressedFname){
     fstream compressed_file (compressedFname, ios::out);
     chunk_size = encoded_text.size() / nw;
     auto e_writer = emitter2(nw,&partial_encoding,chunk_size);
-    auto c_writer = collector_3(&partial_writes);
+    auto c_writer = collector_2(&partial_writes);
     ff::ff_OFarm<> mf_write(move(writers));
     mf_write.add_emitter(e_writer);
     mf_write.add_collector(c_writer);

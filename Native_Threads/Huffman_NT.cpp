@@ -194,14 +194,14 @@ void start_exec(int nw, string fname, string compressedFname){
 	cout << "Working with " << nw << " workers " << endl; 
 
     // Reading File
-    {utimer t0("File Reading:");
+    {utimer t_read("Reading File:");
         do{
             getline(file,line);
 			tmp += line;	
 		}while(!file.eof());   
     }
 
-    {utimer t1("Sending Tasks:");
+    {utimer t_send_task("Sending Tasks:");
 
 		int chunk_size = tmp.size() / nw;    
 
@@ -222,7 +222,7 @@ void start_exec(int nw, string fname, string compressedFname){
 
     }
 
-	{utimer t2("Building and Encoding Huffman Tree");
+	{utimer t_build_tree("Building and Encoding Huffman Tree");
 		huffmanMap = huffmanTreeBuilder(m,ref(queue),root);
 	}
 
@@ -296,13 +296,11 @@ int main(int argc, char * argv[]){
 	
 	string fname = (argc > 1 ? argv[1] : "../data/dataset.txt");  // Input File Name
 	string compressedFname = (argc > 1 ? argv[2] : "../data/dataset_compressed_NT.txt");  // Output File Name
-	fstream log("../data/log.txt",fstream::app); // Statistics File
 
-	long usecs, usecs2;
+	long usecs;
 	long time_seq;
 	double speedup,scalability;
-	vector<thread> tids_ex;
-	vector<long> thread_timings;
+
 
 	for (int i = 1; i <= 64; i*=2){
 

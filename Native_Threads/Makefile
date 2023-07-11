@@ -11,7 +11,6 @@ CFLAGS  = -g -O3 -std=c++20 -pthread \
 
 # The build target 
 TARGET = Huffman_NT
-
 PARAMS = "../data/dataset.txt" "../data/dataset_compressed_NT.txt" 
 
 all: $(TARGET)

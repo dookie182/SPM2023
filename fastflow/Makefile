@@ -11,7 +11,6 @@ CFLAGS  = -g -O3 -std=c++20 \
 
 # The build target 
 TARGET = ffhuffman
-FILE = ../data/asciiText2_compressed
 PARAMS = "../data/dataset.txt" "../data/dataset_compressed_FF.txt" 
 
 
@@ -19,16 +18,13 @@ all: $(TARGET)
 
 $(TARGET): $(TARGET).cpp
 			$(CC) $(CFLAGS) -o $(TARGET) $(TARGET).cpp
-
 clean:
 	$(RM) $(TARGET)
-	$(RM) $(FILE).txt
 
 restart:
 	$(RM) $(TARGET)
 	$(CC) $(CFLAGS) -o $(TARGET) $(TARGET).cpp
 	./$(TARGET)
-
 run: 
 	./$(TARGET) $(PARAMS)
 
