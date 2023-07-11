@@ -57,28 +57,6 @@ void encode(Node* root, string str,
 	encode(root->right, str + "1", huffmanCode);
 }
 
-// traverse the Huffman Tree and decode the encoded string
-void decode(Node* root, int &index, string str)
-{
-	if (root == nullptr) {
-		return;
-	}
-
-	// found a leaf node
-	if (!root->left && !root->right)
-	{
-		cout << root->ch;
-		return;
-	}
-
-	index++;
-
-	if (str[index] =='0')
-		decode(root->left, index, str);
-	else
-		decode(root->right, index, str);
-}
-
 // Builds Huffman Tree and decode given input text
 void buildHuffmanTree(string text, fstream &compressed_file)
 {

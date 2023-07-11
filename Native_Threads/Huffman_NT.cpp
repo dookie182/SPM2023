@@ -59,29 +59,6 @@ void encode(Node* root, string str, unordered_map<char, string> &huffmanMap)
 	encode(root->right, str + "1", huffmanMap);
 }
 
-
-// Function to encode 
-void decode(Node* root, int &index, string str)
-{
-	if (root == nullptr) {
-		return;
-	}
-
-	// Leaf node
-	if (!root->left && !root->right)
-	{
-		cout << root->ch;
-		return;
-	}
-
-	index++;
-
-	if (str[index] =='0')
-		decode(root->left, index, str);
-	else
-		decode(root->right, index, str);
-}
-
 unordered_map<char, string> huffmanTreeBuilder(unordered_map<char, int> m, priority_queue<Node*, vector<Node*>,compare>& queue, Node* &root){
 
 //	Generating Leaf Nodes with associated priorities;
@@ -116,7 +93,7 @@ void computeOcc(string line, unordered_map<char, int>* m) {
 	
 	unordered_map<char, int> temp;
 	
-	// Map Reduce on a local temp Map;
+	// Storing elems in a local temp Map;
 	for(char elem: line){
 		temp[elem] = temp[elem] + 1;
 	}
@@ -130,6 +107,7 @@ void computeOcc(string line, unordered_map<char, int>* m) {
 
 }
 
+// Function to generate binary encoded string
 void encodeFile(string line, unordered_map<char, string> huffmanMap, vector<string> *partial_encoding, int index) {
 
 	string to_write;
@@ -142,6 +120,7 @@ void encodeFile(string line, unordered_map<char, string> huffmanMap, vector<stri
 
 }
 
+// Function to compress binary string
 void compressFile(string line, vector<string> *partial_writes, int index) {
 	string tmp, to_compress;
 
@@ -157,7 +136,34 @@ void compressFile(string line, vector<string> *partial_writes, int index) {
 	(*partial_writes)[index] = to_compress;
 }
 
+// Function to organize strings in vector
+void organize(int nw, vector<string> *partial_encoding){
+  
+  string tail;
+  int groups = 0;
 
+  for (int i = 0; i < nw; i++){
+  if(tail.size() > 0){
+    (*partial_encoding)[i] = tail + (*partial_encoding)[i];
+    tail.clear();
+  }
+  if((*partial_encoding)[i].size() % 8 != 0){
+      groups = (*partial_encoding)[i].size()/8;
+      groups = groups * 8;
+      if(i != nw - 1){
+        tail = (*partial_encoding)[i].substr(groups,(*partial_encoding)[i].size() - groups);
+      }else{
+        tail = (*partial_encoding)[i].substr(groups,(*partial_encoding)[i].size() - groups);
+        int n_zero = 8 - tail.size();
+        auto last = string(n_zero, '0') + tail;
+        (*partial_encoding)[i] = (*partial_encoding)[i]+last;
+        tail.clear();
+      }
+    }
+  }
+}
+
+// Function to start execution with par degree equal to nw
 void start_exec(int nw, string fname, string compressedFname){
 	vector<thread> tids;
 	vector<thread> tids2;
@@ -234,27 +240,7 @@ void start_exec(int nw, string fname, string compressedFname){
 		}
 	}
 
-	int groups = 0;
-	string tail;
-
-	for (int i = 0; i < nw; i++){
-		if(tail.size() > 0){
-			partial_encoding[i] = tail + partial_encoding[i];
-			tail.clear();
-		}
-		if(partial_encoding[i].size() % 8 != 0){
-			groups = partial_encoding[i].size()/8;
-			groups = groups * 8;
-			if(i != nw - 1){
-				tail = partial_encoding[i].substr(groups,partial_encoding[i].size() - groups);
-			}else{
-				tail = partial_encoding[i].substr(groups,partial_encoding[i].size() - groups);
-				int n_zero = 8 - tail.size();
-				auto last = string(n_zero, '0') + tail;
-				partial_encoding[i] = partial_encoding[i]+last;
-			}
-		}
-	}
+	organize(nw,&partial_encoding);
 
 	{
 		utimer t_compress("Compressing File");
@@ -292,7 +278,6 @@ int main(int argc, char * argv[]){
 	long best_time_seq = 2959428;
 	double speedup,scalability,efficiency;
 
-
 	for (int i = 1; i <= 64; i*=2){
 
 		{
@@ -306,7 +291,7 @@ int main(int argc, char * argv[]){
 			time_seq = usecs;
 		}
 		if(usecs != 0 && i != 1) {
-			// Evaluating SpeedUp
+			// Evaluating Statistics
 			cout << "--------------------------- Computed Statistics ------------------------------------" << endl;
 			scalability = time_seq / (double)usecs;
 			speedup = best_time_seq / (double)usecs;

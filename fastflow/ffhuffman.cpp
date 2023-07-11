@@ -11,21 +11,26 @@
 
 using namespace std; 
 
+// Task for counting symbols in input text
 typedef struct __task {
   string line;
   unordered_map<char,int> m;
 } TASK; 
 
+// Task for encoding and compressing input text
 typedef struct __task_2 {
   string line;
 } ENCODE_TASK; 
 
+
+// Huffman Tree Node
 struct Node {
     char ch;
 	int freq;
 	Node *left, *right;
 };
 
+// Compare Function for Huffman Tree 
 struct compare
 {
 	bool operator()(Node* left, Node* right)
@@ -35,6 +40,7 @@ struct compare
 	}
 };
 
+// Function to create a new Huffman tree Node
 Node* createNode(char ch, int freq, Node* left, Node*right){
 
 	Node* newNode = new Node();
@@ -46,6 +52,7 @@ Node* createNode(char ch, int freq, Node* left, Node*right){
 
 }
 
+// Function to encode the Huffman Tree
 void encode(Node* root, string str, unordered_map<char, string> &huffmanMap)
 {
 	if (root == nullptr)
@@ -58,27 +65,6 @@ void encode(Node* root, string str, unordered_map<char, string> &huffmanMap)
 
 	encode(root->left, str + "0", huffmanMap);
 	encode(root->right, str + "1", huffmanMap);
-}
-
-void decode(Node* root, int &index, string str)
-{
-	if (root == nullptr) {
-		return;
-	}
-
-	// found a leaf node
-	if (!root->left && !root->right)
-	{
-		cout << root->ch;
-		return;
-	}
-
-	index++;
-
-	if (str[index] =='0')
-		decode(root->left, index, str);
-	else
-		decode(root->right, index, str);
 }
 
 unordered_map<char, string> huffmanTreeBuilder(unordered_map<char, int> m, priority_queue<Node*, vector<Node*>,compare>& queue, Node* &root){
@@ -94,10 +80,7 @@ unordered_map<char, string> huffmanTreeBuilder(unordered_map<char, int> m, prior
 		Node *left = queue.top(); queue.pop();
 		Node *right = queue.top();	queue.pop();
 		
-		// Create a new internal node with these two nodes
-		// as children and with frequency equal to the sum
-		// of the two nodes' frequencies. Add the new node
-		// to the priority queue.
+
 		int sum = left->freq + right->freq;
 		queue.push(createNode('\0', sum, left, right));
 	}
@@ -105,14 +88,13 @@ unordered_map<char, string> huffmanTreeBuilder(unordered_map<char, int> m, prior
 	root = queue.top();
 	unordered_map<char, string> huffmanMap;
 	encode(root, "", huffmanMap);
-	// for (auto pair: huffmanMap) {
-	// 	cout << pair.first << " " << pair.second << '\n';
-	// }
 
 	return huffmanMap;
 
 }
 
+
+// First emitter (used in mf and mf_encode)
 class emitter : public ff::ff_monode_t<TASK> {
   private: 
     int nw; 
@@ -134,6 +116,7 @@ class emitter : public ff::ff_monode_t<TASK> {
     }
 };
 
+// Second emitter (used in mf_write)
 class emitter2 : public ff::ff_monode_t<TASK> {
   private: 
     int nw; 
@@ -155,7 +138,7 @@ class emitter2 : public ff::ff_monode_t<TASK> {
     }
 };
   
-
+// First Collector (used in mf)
 class collector : public ff::ff_node_t<TASK> {
 private: 
   TASK * tt; 
@@ -175,6 +158,7 @@ public:
 
 };
 
+// First Collector (used in mf_encode and mf_write)
 class collector_2 : public ff::ff_node_t<ENCODE_TASK> {
 private: 
   TASK * tt; 
@@ -192,6 +176,7 @@ public:
   }
 };
 
+// Writer worker
 class writer : public ff::ff_node_t<ENCODE_TASK> {
 private: 
   int nw;
@@ -216,6 +201,7 @@ public:
   }
 };
 
+// Encoder Worker
 class encoder : public ff::ff_node_t<ENCODE_TASK> {
 private: 
   unordered_map <char,string> *m;
@@ -234,9 +220,10 @@ public:
     return t;
   }
 };
+
+// Count occurrences worker
 class worker : public ff::ff_node_t<TASK> {
 public:
-
   TASK * svc(TASK * t) {  	
     unordered_map <char,int> temp;
 
@@ -249,6 +236,33 @@ public:
   }
 };
 
+void organize(int nw, vector<string> *partial_encoding){
+  
+  string tail;
+  int groups = 0;
+
+  for (int i = 0; i < nw; i++){
+  if(tail.size() > 0){
+    (*partial_encoding)[i] = tail + (*partial_encoding)[i];
+    tail.clear();
+  }
+  if((*partial_encoding)[i].size() % 8 != 0){
+      groups = (*partial_encoding)[i].size()/8;
+      groups = groups * 8;
+      if(i != nw - 1){
+        tail = (*partial_encoding)[i].substr(groups,(*partial_encoding)[i].size() - groups);
+      }else{
+        tail = (*partial_encoding)[i].substr(groups,(*partial_encoding)[i].size() - groups);
+        int n_zero = 8 - tail.size();
+        auto last = string(n_zero, '0') + tail;
+        (*partial_encoding)[i] = (*partial_encoding)[i]+last;
+        tail.clear();
+      }
+    }
+  }
+}
+
+// Function to start execution with par degree equal to nw
 void start_exec(int nw, string fname, string compressedFname){
   unordered_map<char,int> m;
   priority_queue<Node*, vector<Node*>,compare> queue;
@@ -319,26 +333,7 @@ void start_exec(int nw, string fname, string compressedFname){
       mf_encode.run_and_wait_end();
     }
 
-
-	for (int i = 0; i < nw; i++){
-		if(tail.size() > 0){
-			partial_encoding[i] = tail + partial_encoding[i];
-			tail.clear();
-		}
-		if(partial_encoding[i].size() % 8 != 0){
-        groups = partial_encoding[i].size()/8;
-        groups = groups * 8;
-        if(i != nw - 1){
-          tail = partial_encoding[i].substr(groups,partial_encoding[i].size() - groups);
-        }else{
-          tail = partial_encoding[i].substr(groups,partial_encoding[i].size() - groups);
-          int n_zero = 8 - tail.size();
-          auto last = string(n_zero, '0') + tail;
-          partial_encoding[i] = partial_encoding[i]+last;
-          tail.clear();
-		  }
-		}
-	}
+    organize(nw,&partial_encoding);
 
     fstream compressed_file (compressedFname, ios::out);
     chunk_size = encoded_text.size() / nw;
@@ -377,12 +372,15 @@ int main(int argc, char * argv[]) {
   for (int i = 1; i <= 64; i*=2){
     {
       utimer t0("Completion Time:", &usecs);
+      // Starting Execution with i Workers
 		  start_exec(i,fname,compressedFname);
     }
     if(i == 1){
+      // Storing total sequential time computation
       time_seq = usecs;
     }
     else{
+      // Evaluating Statistics
       cout << "--------------------------- Computed Statistics ------------------------------------" << endl;
 			scalability = time_seq / (double)usecs;
 			speedup = best_time_seq / (double)usecs;
