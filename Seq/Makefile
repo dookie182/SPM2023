@@ -12,6 +12,8 @@ CFLAGS  = -g -O3 -std=c++20 \
 
 # The build target 
 TARGET = Seqhuffman
+PARAMS = "../data/dataset.txt" "../data/dataset_compressed_NT.txt" 
+
 
 all: $(TARGET)
 
@@ -27,5 +29,5 @@ restart:
 	./$(TARGET)
 
 run: 
-	./$(TARGET)
+	./$(TARGET) $(PARAMS)
 

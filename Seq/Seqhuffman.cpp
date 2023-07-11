@@ -143,15 +143,14 @@ void buildHuffmanTree(string text, fstream &compressed_file)
 }
 
 // Huffman coding algorithm
-int main()
+int main(int argc, char * argv[])
 {
     long usecs;
     {
         utimer t0("End Sequential Computation",&usecs);
         string text_block, line;
-        string fname = "../data/dataset.txt";
-        string compressedFname = "../data/dataset_compressed_SEQ.txt";
-
+		string fname = (argc > 1 ? argv[1] : "../data/dataset.txt");  // Input File Name
+		string compressedFname = (argc > 1 ? argv[2] : "../data/dataset_compressed_NT.txt");  // Output File Name
         fstream file (fname, ios::in);
         fstream compressed_file (compressedFname, ios::out);
 

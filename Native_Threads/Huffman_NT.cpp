@@ -111,16 +111,6 @@ unordered_map<char, string> huffmanTreeBuilder(unordered_map<char, int> m, prior
 
 }
 
-void print_map(std::string_view comment, const unordered_map<char, int>& m)
-{
-    std::cout << comment;
-    for (const auto& [key, value] : m)
-        std::cout << '[' << key << "] = " << value << "; "<<endl;
-    std::cout << '\n';
-}
-
-
-
 // Function to count occurrences of symbols in text
 void computeOcc(string line, unordered_map<char, int>* m) {
 	
@@ -324,9 +314,6 @@ int main(int argc, char * argv[]){
 			cout << "SpeedUp with " << i << " Threads:"<< speedup << endl;
 			cout << "Scalability with " << i << " Threads:"<< scalability << endl;
 			cout << "Efficiency with " << i << " Threads:"<< efficiency << endl;
-
-
-
 		}
 	}
 return 0;	

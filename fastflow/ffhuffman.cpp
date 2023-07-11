@@ -249,14 +249,6 @@ public:
   }
 };
 
-void print_map(std::string_view comment, const unordered_map<char, int>& m)
-{
-    std::cout << comment;
-    for (const auto& [key, value] : m)
-        std::cout << '[' << key << "] = " << value << "; "<<endl;
-    std::cout << '\n';
-}
-
 void start_exec(int nw, string fname, string compressedFname){
   unordered_map<char,int> m;
   priority_queue<Node*, vector<Node*>,compare> queue;
@@ -376,7 +368,7 @@ void start_exec(int nw, string fname, string compressedFname){
 int main(int argc, char * argv[]) {
 
   string fname = (argc > 1 ? argv[1] : "../data/dataset.txt");  // Input File Name
-  string compressedFname = (argc > 1 ? argv[2] : "../data/asciiText2_compressed.txt");  // Output File Name
+  string compressedFname = (argc > 1 ? argv[2] : "../data/dataset_compressed_FF.txt");  // Output File Name
 
   long usecs, time_seq;
 	long best_time_seq = 2959428;
@@ -384,7 +376,7 @@ int main(int argc, char * argv[]) {
 
   for (int i = 1; i <= 64; i*=2){
     {
-      utimer t0("End:", &usecs);
+      utimer t0("Completion Time:", &usecs);
 		  start_exec(i,fname,compressedFname);
     }
     if(i == 1){
@@ -399,5 +391,5 @@ int main(int argc, char * argv[]) {
 			cout << "Scalability with " << i << " Threads:"<< scalability << endl;
 			cout << "Efficiency with " << i << " Threads:"<< efficiency << endl;    }
 	}
-  return(0); 
+return(0); 
 }
