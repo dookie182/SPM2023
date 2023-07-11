@@ -93,7 +93,6 @@ unordered_map<char, string> huffmanTreeBuilder(unordered_map<char, int> m, prior
 
 }
 
-
 // First emitter (used in mf and mf_encode)
 class emitter : public ff::ff_monode_t<TASK> {
   private: 
@@ -158,7 +157,7 @@ public:
 
 };
 
-// First Collector (used in mf_encode and mf_write)
+// Second Collector (used in mf_encode and mf_write)
 class collector_2 : public ff::ff_node_t<ENCODE_TASK> {
 private: 
   TASK * tt; 
@@ -178,13 +177,10 @@ public:
 
 // Writer worker
 class writer : public ff::ff_node_t<ENCODE_TASK> {
-private: 
-  int nw;
 public:
   ENCODE_TASK * svc(ENCODE_TASK * t) {
     string to_write;
     string to_send;
-    string front;
     
     for (auto elem : t->line){
       to_write += elem;
@@ -205,7 +201,6 @@ public:
 class encoder : public ff::ff_node_t<ENCODE_TASK> {
 private: 
   unordered_map <char,string> *m;
-  int nw;
 public:
   encoder(unordered_map <char,string> *m):m(m) {}
 

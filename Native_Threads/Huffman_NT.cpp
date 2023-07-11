@@ -95,13 +95,13 @@ void computeOcc(string line, unordered_map<char, int>* m) {
 	
 	// Storing elems in a local temp Map;
 	for(char elem: line){
-		temp[elem] = temp[elem] + 1;
+		temp[elem] ++;
 	}
 
 	// Storing Data in original Map;
 	mutual_exclusion.lock();
 	for (const auto &pair: temp) {
-		(*m)[pair.first] = (*m)[pair.first] + pair.second;
+		(*m)[pair.first] += pair.second;
 	}
 	mutual_exclusion.unlock();
 
