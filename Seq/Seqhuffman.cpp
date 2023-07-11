@@ -100,15 +100,17 @@ void buildHuffmanTree(string text, fstream &compressed_file)
 	// in a map. Also prints them
 	unordered_map<char, string> huffmanCode;
 	encode(root, "", huffmanCode);
-
 	string str = "";
-	for (char ch: text) {
-		str += huffmanCode[ch];
-	}
 
+	{ 
+		utimer t_encode("Encoding File");
+		for (char ch: text) {
+			str += huffmanCode[ch];
+		}
+	}
 	string to_write;
 	{
-		utimer t_write("Writing Compressed File");
+		utimer t_write("Writing and Compressing File");
 		for (char ch : str){
 			to_write += ch;
 			if(to_write.size() == 8){
@@ -143,6 +145,5 @@ int main(int argc, char * argv[])
 		buildHuffmanTree(text_block, compressed_file);
 
     }
-    cout << "End spent " << usecs << " usecs "<< endl;
 	return 0;
 }

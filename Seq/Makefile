@@ -8,11 +8,9 @@ CFLAGS  = -g -O3 -std=c++20 \
        		-ftree-vectorize \
        		-fopt-info-vec-optimized 
       	
-			
-
 # The build target 
 TARGET = Seqhuffman
-PARAMS = "../data/dataset.txt" "../data/dataset_compressed_NT.txt" 
+PARAMS = "../data/dataset.txt" "../data/dataset_compressed_SEQ.txt" 
 
 
 all: $(TARGET)

@@ -8,7 +8,6 @@ CFLAGS  = -g -O3 -std=c++20 \
        		-ftree-vectorize \
        		-fopt-info-vec-optimized 
 			
-
 # The build target 
 TARGET = ffhuffman
 PARAMS = "../data/dataset.txt" "../data/dataset_compressed_FF.txt" 

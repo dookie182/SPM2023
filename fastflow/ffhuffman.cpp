@@ -140,7 +140,6 @@ class emitter2 : public ff::ff_monode_t<TASK> {
 // First Collector (used in mf)
 class collector : public ff::ff_node_t<TASK> {
 private: 
-  TASK * tt; 
   unordered_map<char,int>* m;
 public: 
 
@@ -160,7 +159,6 @@ public:
 // Second Collector (used in mf_encode and mf_write)
 class collector_2 : public ff::ff_node_t<ENCODE_TASK> {
 private: 
-  TASK * tt; 
   vector<string> *partial_results;
   int index = 0;
 public: 
@@ -231,6 +229,7 @@ public:
   }
 };
 
+// Function to organize strings in vector
 void organize(int nw, vector<string> *partial_encoding){
   
   string tail;
@@ -382,7 +381,8 @@ int main(int argc, char * argv[]) {
 			efficiency = (time_seq / i) / (double)usecs;
 			cout << "SpeedUp with " << i << " Threads:"<< speedup << endl;
 			cout << "Scalability with " << i << " Threads:"<< scalability << endl;
-			cout << "Efficiency with " << i << " Threads:"<< efficiency << endl;    }
+			cout << "Efficiency with " << i << " Threads:"<< efficiency << endl;    
+    }
 	}
 return(0); 
 }
