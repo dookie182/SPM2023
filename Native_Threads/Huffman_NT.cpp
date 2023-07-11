@@ -142,16 +142,10 @@ void computeOcc(string line, unordered_map<char, int>* m) {
 
 void encodeFile(string line, unordered_map<char, string> huffmanMap, vector<string> *partial_encoding, int index) {
 
-	string to_write,front;
+	string to_write;
 
 	for (auto elem : line){
 		to_write += huffmanMap[elem];
-	// 	if (to_write.size() > 8){
-	// 		front = to_write.substr(0,8);
-	// 		bitset<8> c(front);			
-	// 		(*partial_writes)[index] += static_cast<char>(c.to_ulong());
-	// 		to_write = to_write.substr(8, to_write.size() - front.size());
-	// }
 	}
 
 	(*partial_encoding)[index] = to_write;
@@ -261,14 +255,19 @@ void start_exec(int nw, string fname, string compressedFname){
 		if(partial_encoding[i].size() % 8 != 0){
 			groups = partial_encoding[i].size()/8;
 			groups = groups * 8;
-			cout << "After multiply" <<groups<<endl;
-			cout << "Size" << partial_encoding[i].size()<< endl;
-			tail = partial_encoding[i].substr(groups,partial_encoding[i].size() - groups);
+			if(i != nw - 1){
+				tail = partial_encoding[i].substr(groups,partial_encoding[i].size() - groups);
+			}else{
+				tail = partial_encoding[i].substr(groups,partial_encoding[i].size() - groups);
+				int n_zero = 8 - tail.size();
+				auto last = string(n_zero, '0') + tail;
+				partial_encoding[i] = partial_encoding[i]+last;
+			}
 		}
 	}
 
 	{
-	utimer t_compress("Compressing File");
+		utimer t_compress("Compressing File");
 
 		for(int j = 0; j < nw; j++){
 			tids3.push_back(thread(compressFile,partial_encoding[j],&partial_writes,j));
@@ -279,7 +278,8 @@ void start_exec(int nw, string fname, string compressedFname){
 		}
 	}
 	
-	{utimer t4("Writing compressed File");
+	{	
+		utimer t_write("Writing compressed File");
 		for (auto elem : partial_writes){
 			compressed_file << elem;
 		}
@@ -291,21 +291,6 @@ void start_exec(int nw, string fname, string compressedFname){
 
 }
 
-void foo(){
-
-	long usecs;
-
-	{utimer body("Body Exec", &usecs);
-	int tmp = 2;
-
-
-	for(int i = 0; i < 10000; i++){
-		tmp*= tmp;
-	}
-
-	}
-
-}
 
 int main(int argc, char * argv[]){
 	
@@ -318,24 +303,6 @@ int main(int argc, char * argv[]){
 	double speedup,scalability;
 	vector<thread> tids_ex;
 	vector<long> thread_timings;
-
-
-
-	// for (int i = 1; i < 64; i*=2)
-	// 		// Timings about Thread Generation
-	// 	{
-	// 	utimer threads("Fork of threads", &usecs2);
-
-	// 		for (int j = 0; j < i; j++){
-	// 				tids_ex.push_back(thread(foo));			
-	// 			}
-
-	// 		for (auto& tid : tids_ex){
-	// 			if(tid.joinable()){
-	// 				tid.join();
-	// 			}
-	// 		}
-	// 	}
 
 	for (int i = 1; i <= 64; i*=2){
 

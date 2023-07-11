@@ -135,6 +135,29 @@ class emitter : public ff::ff_monode_t<TASK> {
         return(EOS);
     }
 };
+
+class emitter2 : public ff::ff_monode_t<TASK> {
+  private: 
+    int nw; 
+    vector<string> *partial_encoding;
+    int chunk_size;
+  public:
+    emitter2(int nw, vector<string> *partial_encoding, int chunk_size):nw(nw),partial_encoding(partial_encoding),chunk_size(chunk_size) {}
+
+    TASK * svc(TASK *) {
+        string text_block;
+        //int chunk_size = (*line).size()/nw;
+
+        for(int i = 0; i < nw; i++){
+          text_block = (*partial_encoding)[i];
+          auto t = new TASK(text_block);
+          ff_send_out(t);
+          text_block.clear();
+        }
+
+        return(EOS);
+    }
+};
   
 
 class collector : public ff::ff_node_t<TASK> {
@@ -159,12 +182,14 @@ public:
 class collector_2 : public ff::ff_node_t<ENCODE_TASK> {
 private: 
   TASK * tt; 
-  string *encoded_text;
+  vector<string> *partial_encoding;
+  int index = 0;
 public: 
-  collector_2(string *encoded_text):encoded_text(encoded_text){}
+  collector_2(vector<string> *partial_encoding):partial_encoding(partial_encoding){}
 
   ENCODE_TASK * svc(ENCODE_TASK * t) {
-    *encoded_text += t->line;
+    (*partial_encoding)[index] = t->line;
+    index++;
 
     free(t);
     return(GO_ON);
@@ -174,12 +199,14 @@ public:
 class collector_3 : public ff::ff_node_t<ENCODE_TASK> {
 private: 
   TASK * tt; 
-  fstream* fout;
+  vector<string> *partial_writes;
+  int index = 0;
 public: 
-  collector_3(fstream* fout):fout(fout){}
+  collector_3(vector<string> *partial_writes):partial_writes(partial_writes){}
 
   ENCODE_TASK * svc(ENCODE_TASK * t) {
-    *fout << t->line;
+    (*partial_writes)[index] = t->line;
+    index++;
 
     free(t);
     return(GO_ON);
@@ -203,6 +230,7 @@ public:
         to_write.clear();
       }
     }
+
     t->line = to_send;
 
     return t;
@@ -256,6 +284,8 @@ void start_exec(int nw, string fname, string compressedFname){
 	unordered_map<char, string> huffmanMap;  
   Node* root;
   string str,line, encoded_text;
+  vector<string> partial_encoding(nw);
+	vector<string> partial_writes(nw);
   int chunk_size = 0;
 	cout << "-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_" << endl;
   cout << "Working with " << nw << " workers " << endl; 
@@ -306,7 +336,7 @@ void start_exec(int nw, string fname, string compressedFname){
       writers[i] = make_unique<writer>();
     }
 
-    auto c_encoder = collector_2(&encoded_text);
+    auto c_encoder = collector_2(&partial_encoding);
 
     ff::ff_OFarm<> mf_encode(move(encoders));
     mf_encode.add_emitter(e);
@@ -317,18 +347,48 @@ void start_exec(int nw, string fname, string compressedFname){
       mf_encode.run_and_wait_end();
     }
 
+
+    int groups = 0;
+    string tail;
+
+	for (int i = 0; i < nw; i++){
+		if(tail.size() > 0){
+			partial_encoding[i] = tail + partial_encoding[i];
+			tail.clear();
+		}
+		if(partial_encoding[i].size() % 8 != 0){
+        groups = partial_encoding[i].size()/8;
+        groups = groups * 8;
+        if(i != nw - 1){
+          tail = partial_encoding[i].substr(groups,partial_encoding[i].size() - groups);
+        }else{
+          tail = partial_encoding[i].substr(groups,partial_encoding[i].size() - groups);
+          int n_zero = 8 - tail.size();
+          auto last = string(n_zero, '0') + tail;
+          partial_encoding[i] = partial_encoding[i]+last;
+		  }
+		}
+	}
+
     fstream compressed_file (compressedFname, ios::out);
     chunk_size = encoded_text.size() / nw;
-    auto e_writer = emitter(nw,&encoded_text,chunk_size);
-    auto c_writer = collector_3(&compressed_file);
+    auto e_writer = emitter2(nw,&partial_encoding,chunk_size);
+    auto c_writer = collector_3(&partial_writes);
     ff::ff_OFarm<> mf_write(move(writers));
     mf_write.add_emitter(e_writer);
     mf_write.add_collector(c_writer);
 
     {
-      utimer writing_file("Writing Compressed File");
+      utimer writing_file("Compressing File");
       mf_write.run_and_wait_end();
     }
+   	{
+      utimer t_write("Writing compressed File");
+      for (int i = 0; i < nw; i++){
+        
+        compressed_file << partial_writes[i];
+      }
+	  }
     
     compressed_file.close();
     file.close();
