@@ -9,7 +9,7 @@ CFLAGS  = -g -O3 -std=c++20 \
        		-fopt-info-vec-optimized 
       	
 # The build target 
-TARGET = Seqhuffman
+TARGET = Huffman_SEQ
 PARAMS = "../data/dataset.txt" "../data/dataset_compressed_SEQ.txt" 
 
 
