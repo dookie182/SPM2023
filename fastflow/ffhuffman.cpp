@@ -379,7 +379,8 @@ int main(int argc, char * argv[]) {
   string compressedFname = (argc > 1 ? argv[2] : "../data/asciiText2_compressed.txt");  // Output File Name
 
   long usecs, time_seq;
-  double speedup;
+	long best_time_seq = 2959428;
+	double speedup,scalability,efficiency;
 
   for (int i = 1; i <= 64; i*=2){
     {
@@ -390,9 +391,13 @@ int main(int argc, char * argv[]) {
       time_seq = usecs;
     }
     else{
-      speedup = time_seq / (double) usecs;
-      cout << "SpeedUp with " << i << " Threads:"<< speedup << endl;
-    }
+      cout << "--------------------------- Computed Statistics ------------------------------------" << endl;
+			scalability = time_seq / (double)usecs;
+			speedup = best_time_seq / (double)usecs;
+			efficiency = (time_seq / i) / (double)usecs;
+			cout << "SpeedUp with " << i << " Threads:"<< speedup << endl;
+			cout << "Scalability with " << i << " Threads:"<< scalability << endl;
+			cout << "Efficiency with " << i << " Threads:"<< efficiency << endl;    }
 	}
   return(0); 
 }

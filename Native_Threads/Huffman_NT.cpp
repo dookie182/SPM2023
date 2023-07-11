@@ -299,13 +299,14 @@ int main(int argc, char * argv[]){
 
 	long usecs;
 	long time_seq;
-	double speedup,scalability;
+	long best_time_seq = 2959428;
+	double speedup,scalability,efficiency;
 
 
 	for (int i = 1; i <= 64; i*=2){
 
 		{
-			utimer t0("Total Execution:", &usecs);
+			utimer t0("Completion Time:", &usecs);
 			// Starting Execution with i Workers
 			start_exec(i,fname,compressedFname);
 		}
@@ -316,8 +317,15 @@ int main(int argc, char * argv[]){
 		}
 		if(usecs != 0 && i != 1) {
 			// Evaluating SpeedUp
-			speedup = time_seq / (double)usecs;
+			cout << "--------------------------- Computed Statistics ------------------------------------" << endl;
+			scalability = time_seq / (double)usecs;
+			speedup = best_time_seq / (double)usecs;
+			efficiency = (time_seq / i) / (double)usecs;
 			cout << "SpeedUp with " << i << " Threads:"<< speedup << endl;
+			cout << "Scalability with " << i << " Threads:"<< scalability << endl;
+			cout << "Efficiency with " << i << " Threads:"<< efficiency << endl;
+
+
 
 		}
 	}
