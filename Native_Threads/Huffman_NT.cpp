@@ -250,6 +250,23 @@ void start_exec(int nw, string fname, string compressedFname){
 		}
 	}
 
+	int groups = 0;
+	string tail;
+
+	for (int i = 0; i < nw; i++){
+		if(tail.size() > 0){
+			partial_encoding[i] = tail + partial_encoding[i];
+			tail.clear();
+		}
+		if(partial_encoding[i].size() % 8 != 0){
+			groups = partial_encoding[i].size()/8;
+			groups = groups * 8;
+			cout << "After multiply" <<groups<<endl;
+			cout << "Size" << partial_encoding[i].size()<< endl;
+			tail = partial_encoding[i].substr(groups,partial_encoding[i].size() - groups);
+		}
+	}
+
 	{
 	utimer t_compress("Compressing File");
 
